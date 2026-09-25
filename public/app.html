@@ -857,7 +857,7 @@ function requestCard(q, app) {
     + '<div class="answer"><input data-answer="' + esc(q.id) + '" placeholder="Your answer" aria-label="Your answer">'
     + '<button class="btn primary" data-act="answer" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Answer</button></div>'
     + '<div class="actions"><button class="btn link" data-act="discard-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Never mind</button></div>';
-  else if (q.status === 'READY') body = steps
+  else if (q.status === 'READY') body = steps + (q.summary ? '<p class="say">' + esc(q.summary) + '</p>' : '')
     + '<div class="found ' + verdict[0] + '"><b>' + verdict[1] + '</b>'
     + q.findings.map(function (f) { return '<div class="f ' + esc(f.level) + '"><span>' + (icon[f.level] || '·') + '</span><span>' + esc(f.text) + ' <em>' + (f.by === 'rules' ? 'rules' : 'checker') + '</em></span></div>'; }).join('')
     + '</div><div class="actions"><span class="meta">Each step runs as you, inside your QuickBooks role.</span>'
