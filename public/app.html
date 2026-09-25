@@ -1757,9 +1757,9 @@ async function boot() {
       : t.kind === 'wage_journal' ? `Checks for finished pay periods every morning at ${esc((t.schedule && t.schedule.at) || '07:00')}`
       : `Every morning at ${esc((t.schedule && t.schedule.at) || '07:00')}`;
     const cards = a.tasks.map((t) => `<div class="ap-task"><div class="top"><div class="main"><b>${esc(t.name)}</b></div><span class="pill ${t.is_on ? 'yes' : 'wait'}">${t.is_on ? 'On' : 'Off'}</span></div>
-      <div class="ap-sentence">${esc(t.about)}${t.pay_schedule ? ` Pay period: <span class="ap-tok">${esc(t.pay_schedule.name)}</span>.` : ''}</div>
+      <div class="ap-sentence">${esc(t.about)}${t.kind === 'wage_journal' ? ` Pay period: <span class="ap-tok">${esc(t.pay_schedule ? t.pay_schedule.name : 'each person’s own')}</span>.` : ''}</div>
       <dl><div><dt>Runs</dt><dd>${every(t)}</dd></div>
-        <div><dt>Last run</dt><dd>${t.last_run_at ? `${esc(new Date(t.last_run_at).toLocaleString())} — ${t.last_run.error ? `<span style="color:var(--out)">${esc(t.last_run.error)}</span>` : `${plural(t.last_run.ready || 0, 'item')} brought in, ${t.last_run.waiting || 0} waiting`}` : 'Not run yet'}</dd></div>
+        <div><dt>Last run</dt><dd>${t.last_run_at ? `${esc(new Date(t.last_run_at).toLocaleString())} — ${t.last_run.error ? `<span style="color:var(--out)">${esc(t.last_run.error)}</span>` : `${plural(t.last_run.ready || 0, 'item')} brought in, ${t.last_run.waiting || 0} waiting`}${t.last_run.note ? `<br><span class="ap-eg">${esc(t.last_run.note)}</span>` : ''}` : 'Not run yet'}</dd></div>
         <div><dt>Posted by</dt><dd>${esc(t.owner_name)}${t.mine ? ' — you' : ''}, item by item</dd></div></dl>
       <div class="foot"><span class="meta">${t.mine ? 'You own this task' : 'Owned by ' + esc(t.owner)}</span>
         ${t.mine ? `<button class="btn sm" data-act="run" data-id="${t.id}">Run now</button><button class="btn sm" data-act="edit-task" data-id="${t.id}">Edit</button>
@@ -2006,13 +2006,13 @@ async function boot() {
     } else {
       if (!AP.setup || AP.setup.failed) await refresh('setup');
       const scheds = (AP.setup.schedules || []).filter((x) => x.status === 'CONFIRMED');
-      if (!scheds.length) { say('Add a pay period first, on the Pay tab'); AP.sub = 'pay'; render(); return; }
       if (!AP.accounts) {
         try { AP.accounts = (await call('qb_accounts')).accounts; } catch (e) { say(e.message); return; }
       }
       const opt = (sel, filter) => AP.accounts.filter(filter).map((x) => `<option value="${esc(x.id)}" data-name="${esc(x.name)}" ${sel && sel.value === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.type)}</option>`).join('');
       body = `<label for="tkName">Name</label><input id="tkName" value="${esc(now ? now.name : 'Post wages as a journal entry')}">
-        <label for="tkSched">Pay period</label><select id="tkSched">${scheds.map((x) => `<option value="${x.id}" ${cfg.schedule_id === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        <label for="tkSched">Pay period</label><select id="tkSched"><option value="" ${!cfg.schedule_id ? 'selected' : ''}>Each person’s own pay period</option>${scheds.map((x) => `<option value="${x.id}" ${cfg.schedule_id === x.id ? 'selected' : ''}>Only ${esc(x.name)}</option>`).join('')}</select>
+        <div class="hint">Everyone is paid on the period set in their pay; one journal per period, when it ends.</div>
         <label for="tkDebit">Wages go to (expense)</label><select id="tkDebit"><option value="">Choose…</option>${opt(cfg.debit_account, (x) => /expense|cost/i.test(x.type))}</select>
         <label for="tkCredit">Owed from (liability or bank)</label><select id="tkCredit"><option value="">Choose…</option>${opt(cfg.credit_account, (x) => /liabilit|bank|payable/i.test(x.type))}</select>
         <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="tkLines" style="width:auto" ${cfg.one_line_per_person === false ? '' : 'checked'}> One line per person</label>
