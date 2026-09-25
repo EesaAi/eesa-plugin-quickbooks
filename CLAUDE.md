@@ -7,19 +7,20 @@ comments, fixtures or commit messages. Sample data uses made-up names.
 
 ## The interface is agentic — no tap-and-go
 
-Decided 2026-09-25 for every Eesa application. `public/app.html` is one screen:
+Decided 2026-09-25 for every Eesa application. `public/app.html` is one chat:
 
-- **The page speaks first** — a greeting and where the books stand, in words,
-  with the few numbers the person's QuickBooks role lets them see.
-- **What needs you** — cards the agents and tasks made, each with one decision:
-  a change to approve (the amount is the largest thing on it; high-risk amounts
-  are typed back), an attendance request drafted by the assistant and checked by
-  a checker, hours ready to post, people not matched yet.
-- **What you asked, and the answer** — one box to type or speak. Everything goes
-  to the QuickBooks agent, which answers from the books and hands setup ("add
-  Alex, $18 an hour") to the attendance assistant (`qb_request_ask`). What an
-  answer made shows as a live card right under it.
-- **What was done** — quietly, below.
+- **History down the side** — New chat, "Needs you" (every flow waiting on the
+  person, from any conversation), then each conversation, newest first
+  (`specialist_chat_conversations`). On a phone it is a drawer.
+- **A conversation** is questions to the QuickBooks agent and everything asked
+  for in them, in order (`qb_chat`): each answer with **What I did** — the
+  agent's own actions from the ledger — and each request as a **flow**: a card
+  with its log (asked → drafted → rules → checker → approved → each step →
+  done) and the one decision it needs. Changes to QuickBooks are flows too.
+- **A new chat** opens by saying where the books stand, in words.
+- **One box to type or speak.** Everything goes to the QuickBooks agent, which
+  answers from the books and hands setup ("add Alex, $18 an hour", "post this
+  week's hours") to the attendance assistant (`qb_request_ask`).
 
 Do not add tabs, menus, settings pages or blank forms. A new capability is an
 agent tool in Eesa first (Tool-Flow-Backend), and a card here only when a person

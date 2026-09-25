@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>QuickBooks</title>
 <!--
-  QuickBooks in Eesa — asked, not operated.
+  QuickBooks in Eesa — one chat, run by agents.
 
   THE SHAPE (Eesa's rule since 2026-09-25: the interface is agentic)
-    One place to type or speak. The QuickBooks agent answers from the books
-    and hands setup ("add Alex, $18 an hour") to the attendance assistant,
-    whose draft a checker reviews. Anything that would change QuickBooks or
-    somebody's pay waits here as a card with one decision on it. No tabs, no
-    menus, no settings screens: the page says where things stand, shows what
-    needs you, answers what you ask, and says what was done.
+    A chat with its history down the side. You say what you want — typed or
+    spoken — and the QuickBooks agent does it: it answers from the books, and
+    hands setup ("add Alex, $18 an hour", "post this week's hours") to the
+    attendance assistant, whose draft a checker reviews. Every request is a
+    FLOW in the conversation that asked for it: a card with its log — who
+    did what, when — and the one decision it needs from you. Every answer
+    carries what the agent did to reach it. "Needs you" gathers every flow
+    waiting on you, from any conversation. No tabs, menus or settings screens.
 
   NO CREDENTIAL EVER REACHES THIS PAGE
     1. The Eesa shell posts { type:'eesa:session', token, theme, apiBase }.
@@ -21,8 +23,7 @@
        that short-lived token. Eesa checks the person's recorded QuickBooks
        role, injects this plugin's key server-side, and proxies the call.
     3. So a "Reports only" person sees exactly what "Reports only" covers. The
-       page asks for the role FIRST and only asks for what it covers — the gate
-       would refuse the rest anyway, and a wall of refusals teaches nothing.
+       page asks for the role FIRST and only asks for what it covers.
 
   THE ARGUMENT ENVELOPE IS NOT WHAT IT LOOKS LIKE
     Intuit's tools take { params: {...} }, not the arguments directly. Eesa's
@@ -32,125 +33,90 @@
   THIS REPOSITORY IS PUBLIC — no real names, emails or figures in this file.
 -->
 <style>
-  /* Apple's grouped surfaces with Intuit's green as the one accent, so it still
-     reads as QuickBooks to somebody who uses a phone all day. */
+  /* Apple's grouped surfaces with Intuit's green as the one accent. */
   :root {
     --qb: #2CA01C; --qb-press: #108000; --qb-soft: rgba(44,160,28,.10);
-    --bg: #F2F2F7; --group: #FFFFFF; --raised: #FFFFFF;
+    --bg: #F2F2F7; --side: #EAEAEF; --group: #FFFFFF; --raised: #FFFFFF;
     --label: #1C1C1E; --label2: #6C6C70; --label3: #8E8E93;
-    --sep: #D9D9DE; --fill: #EFEFF4;
-    --in: #1B8A3E; --out: #C4351C; --warn: #B25000;
+    --sep: #D9D9DE; --fill: #E5E5EA;
+    --in: #1B8A3E; --out: #C4351C; --warn: #B25000; --mind: #6E56CF;
     --r: 16px;
     --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 14px rgba(0,0,0,.035);
     --safe: env(safe-area-inset-bottom, 0px);
-    --dock: rgba(242,242,247,.88);
   }
   :root[data-theme="dark"] {
     --qb: #35C22B; --qb-press: #2CA01C; --qb-soft: rgba(53,194,43,.16);
-    --bg: #000000; --group: #1C1C1E; --raised: #2C2C2E;
+    --bg: #000000; --side: #0E0E10; --group: #1C1C1E; --raised: #2C2C2E;
     --label: #FFFFFF; --label2: #AEAEB2; --label3: #8E8E93;
     --sep: #38383A; --fill: #2C2C2E;
-    --in: #32D74B; --out: #FF6961; --warn: #FF9F0A;
-    --shadow: none; --dock: rgba(0,0,0,.84);
+    --in: #32D74B; --out: #FF6961; --warn: #FF9F0A; --mind: #A48BFF;
+    --shadow: none;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
   html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0; background: var(--bg); color: var(--label);
-    font: 17px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+  body { margin: 0; background: var(--bg); color: var(--label); overflow: hidden;
+         font: 17px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+         -webkit-font-smoothing: antialiased; }
   button, input, textarea { font: inherit; color: inherit; }
   [hidden] { display: none !important; }
-  .page { max-width: 720px; margin: 0 auto; padding: 0 16px calc(176px + var(--safe)); }
 
-  /* Who and where, never in the way. */
-  .top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 11px;
-         padding: 12px 0 10px; background: var(--bg); }
-  .mark { width: 34px; height: 34px; border-radius: 9px; background: var(--qb); color: #fff; flex: none;
-          display: grid; place-items: center; font-weight: 800; font-size: 15px; letter-spacing: -.03em; }
-  .top .t { flex: 1; min-width: 0; }
-  .co { font-size: 17px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .role { font-size: 13px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .avatar { width: 36px; height: 36px; border-radius: 999px; background: var(--fill); color: var(--label);
-            display: grid; place-items: center; font-size: 15px; font-weight: 650; border: 0; cursor: pointer; flex: none; }
+  /* ── the shell: history down the side, the chat beside it ── */
+  .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); height: 100%; }
+  .side { background: var(--side); border-right: 1px solid var(--sep); display: flex; flex-direction: column;
+          padding: 12px 10px calc(10px + var(--safe)); min-height: 0; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; }
+  .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--qb); color: #fff; flex: none;
+          display: grid; place-items: center; font-weight: 800; font-size: 14px; letter-spacing: -.03em; }
+  .co { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sbtn { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; cursor: pointer;
+          text-align: left; padding: 9px 10px; border-radius: 10px; font-size: 15px; color: var(--label); }
+  .sbtn:hover { background: var(--fill); }
+  .sbtn.on { background: var(--group); box-shadow: var(--shadow); font-weight: 600; }
+  .sbtn.new { border: 1px solid var(--sep); background: var(--group); font-weight: 600; margin-bottom: 6px; }
+  .sbtn .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { background: var(--qb); color: #fff; border-radius: 999px; font-size: 11.5px; font-weight: 700; min-width: 20px;
+       height: 20px; padding: 0 6px; display: inline-grid; place-items: center; }
+  .convs { flex: 1; overflow-y: auto; margin: 6px -4px 0; padding: 0 4px; }
+  .glab { font-size: 12px; font-weight: 650; color: var(--label3); text-transform: uppercase; letter-spacing: .05em;
+          margin: 14px 10px 4px; }
+  .me { margin-top: 8px; border-top: 1px solid var(--sep); padding-top: 8px; }
+  .avatar { width: 30px; height: 30px; border-radius: 999px; background: var(--fill); display: grid; place-items: center;
+            font-size: 13px; font-weight: 700; flex: none; }
+  .me small { display: block; font-size: 12px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scrim { display: none; }
 
-  /* The page speaks first. */
-  #now { scroll-margin-top: 64px; }
-  .brief { padding: 10px 2px 2px; }
-  .hello { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.025em; margin: 0 0 10px; text-wrap: balance; }
-  .brief p { margin: 0 0 6px; }
+  .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--sep); min-height: 52px; }
+  .bar .title { flex: 1; min-width: 0; font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon { width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; cursor: pointer;
+          display: grid; place-items: center; color: var(--label); flex: none; }
+  .icon:hover { background: var(--fill); }
+  .icon svg { width: 22px; height: 22px; }
+  .menu { display: none; }
+  .scroll { flex: 1; overflow-y: auto; padding: 0 16px; -webkit-overflow-scrolling: touch; }
+  .col { max-width: 760px; margin: 0 auto; padding: 18px 0 28px; display: flex; flex-direction: column; gap: 12px; }
+
+  @media (max-width: 899px) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .side { position: fixed; z-index: 40; top: 0; bottom: 0; left: 0; width: min(86vw, 320px);
+            transform: translateX(-105%); transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.2); }
+    .shell.open .side { transform: none; }
+    .shell.open .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.3); }
+    .menu { display: grid; }
+  }
+
+  /* ── the page speaks first ── */
+  .hello { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.025em; margin: 6px 0 4px; text-wrap: balance; }
+  .brief p { margin: 6px 0; }
   .brief b { font-weight: 650; font-variant-numeric: tabular-nums; }
-  .brief .quiet { color: var(--label2); font-size: 15px; }
+  .quiet { color: var(--label2); font-size: 15px; }
   .in { color: var(--in); } .out { color: var(--out); }
   .skel { height: 13px; border-radius: 7px; background: var(--fill); margin: 10px 0; animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .45; } }
+  .h2 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
 
-  .label { font-size: 13px; font-weight: 650; color: var(--label2); text-transform: uppercase; letter-spacing: .05em;
-           margin: 22px 4px 8px; display: flex; align-items: center; gap: 8px; }
-  .label .n { background: var(--qb); color: #fff; border-radius: 999px; font-size: 11.5px; min-width: 19px; height: 19px;
-              padding: 0 6px; display: inline-grid; place-items: center; letter-spacing: 0; }
-
-  /* A card: one thing, one decision. */
-  .card { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px; }
-  .kicker { font-size: 12.5px; font-weight: 650; color: var(--label3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
-  .card h3 { margin: 0; font-size: 16.5px; line-height: 1.3; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
-  .card .say { margin: 6px 0 0; font-size: 15px; color: var(--label2); }
-  .card .ask { margin: 8px 0 0; font-size: 16px; }
-  .working::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--qb);
-                    margin-left: 8px; vertical-align: middle; animation: pulse 1s infinite; }
-  .steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 5px; font-size: 15px; }
-  .steps li.ok, .steps li.bad { list-style: none; margin-left: -20px; }
-  .steps li.ok { color: var(--in); } .steps li.bad { color: var(--out); }
-  .found { margin-top: 10px; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; background: var(--fill); }
-  .found.ok { background: rgba(27,138,62,.08); } .found.warn { background: rgba(178,80,0,.08); } .found.bad { background: rgba(196,53,28,.08); }
-  .found > b { display: block; margin-bottom: 4px; }
-  .found.ok > b { color: var(--in); } .found.warn > b { color: var(--warn); } .found.bad > b { color: var(--out); }
-  .f { display: flex; gap: 8px; margin-top: 3px; }
-  .f > span:first-child { width: 14px; flex: none; font-weight: 700; }
-  .f.ok > span:first-child { color: var(--in); } .f.warn > span:first-child { color: var(--warn); } .f.stop > span:first-child { color: var(--out); }
-  .f em { font-style: normal; font-size: 12px; color: var(--label3); margin-left: 4px; }
-  .rows { margin-top: 10px; border-top: 1px solid var(--sep); }
-  .rowx { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--sep); font-size: 15px; }
-  .rowx .main { flex: 1; min-width: 0; } .rowx small { display: block; color: var(--label2); font-size: 13px; }
-  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .answer { display: flex; gap: 8px; margin-top: 10px; }
-  .answer input { flex: 1; min-width: 0; border: 1px solid var(--sep); border-radius: 12px; padding: 10px 12px; background: var(--bg); }
-
-  .actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .actions .meta { flex: 1 1 200px; text-align: left; font-size: 13px; color: var(--label2); }
-  .btn { border: 1px solid var(--sep); background: var(--group); border-radius: 12px; padding: 9px 14px; cursor: pointer;
-         font-size: 15px; line-height: 1.1; }
-  .btn.primary { background: var(--qb); border-color: var(--qb); color: #fff; font-weight: 650; }
-  .btn.primary:active { background: var(--qb-press); }
-  .btn.link { border: 0; background: transparent; color: var(--qb); font-weight: 600; padding: 6px 4px; }
-  .btn.danger { background: var(--out); border-color: transparent; color: #fff; }
-  .btn[disabled] { opacity: .5; cursor: default; }
-  .pill { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600;
-          background: var(--fill); color: var(--label2); white-space: nowrap; }
-  .pill.wait { color: var(--warn); } .pill.yes { color: var(--in); } .pill.no { color: var(--out); } .pill.qb { color: var(--qb); background: var(--qb-soft); }
-  .meta { font-size: 13px; color: var(--label2); margin-top: 2px; }
-  .msg { color: var(--label2); font-size: 15px; padding: 4px 2px; }
-  .msg.bad { color: var(--out); }
-  details.more > summary { list-style: none; cursor: pointer; color: var(--label2); font-size: 14px; padding: 6px 4px; }
-  details.more > summary::-webkit-details-marker { display: none; }
-
-  /* A change to QuickBooks — the amount is the largest thing on it, the status a stripe. */
-  .change { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 13px 15px 12px; margin-bottom: 10px; }
-  .chead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .chead b { font-size: 16px; display: block; margin-top: 4px; }
-  .amt { font-size: 24px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .lines { margin: 10px 0 0; border-top: 1px solid var(--sep); }
-  .line { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--sep); font-size: 14px; }
-  .strip { margin-top: 10px; border-radius: 10px; padding: 9px 12px; font-size: 14px; line-height: 1.4; }
-  .strip b { display: block; margin-bottom: 2px; }
-  .strip.bad { background: rgba(196,53,28,.08); color: var(--out); }
-  .strip.warn { background: rgba(178,80,0,.08); color: var(--warn); }
-  .strip.ok { background: rgba(27,138,62,.08); color: var(--in); }
-
-  /* What was asked, and what was answered. */
-  .thread { display: flex; flex-direction: column; gap: 10px; }
-  #earlier:not(:empty) { margin: 8px 0 4px; }
+  /* ── what was asked, and what was answered ── */
   .turn { max-width: 88%; }
   .turn.me { align-self: flex-end; }
   .bubble { background: var(--group); border-radius: 19px; padding: 11px 15px; box-shadow: var(--shadow); font-size: 16px; overflow-wrap: anywhere; }
@@ -163,37 +129,93 @@
   .bubble th { color: var(--label2); font-size: 12.5px; font-weight: 600; }
   .bubble td.n, .bubble th.n { text-align: right; font-variant-numeric: tabular-nums; }
   .bubble code { background: var(--fill); border-radius: 5px; padding: 1px 5px; font-size: 14px; }
-  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .thinking { color: var(--label3); }
-  .inline-card { max-width: 100%; align-self: stretch; }
+  .working::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--qb);
+                    margin-left: 8px; vertical-align: middle; animation: pulse 1s infinite; }
+  details.did { margin: 6px 4px 0; font-size: 13.5px; color: var(--label2); }
+  details.did > summary { cursor: pointer; list-style: none; }
+  details.did > summary::-webkit-details-marker { display: none; }
+  details.did > summary::before { content: '▸ '; } details.did[open] > summary::before { content: '▾ '; }
 
-  /* One place to type or speak. */
-  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--dock);
-          -webkit-backdrop-filter: saturate(1.8) blur(18px); backdrop-filter: saturate(1.8) blur(18px);
-          border-top: 1px solid var(--sep); padding: 8px 16px calc(10px + var(--safe)); }
-  .dock .in { max-width: 720px; margin: 0 auto; position: relative; }
+  /* ── a flow: one request, its log, its one decision ── */
+  .flow { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; }
+  .fhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .kicker { font-size: 12.5px; font-weight: 650; color: var(--label3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .flow h3 { margin: 0; font-size: 16.5px; line-height: 1.3; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .amt { font-size: 24px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .say { margin: 6px 0 0; font-size: 15px; color: var(--label2); }
+  .ask { margin: 10px 0 0; font-size: 16px; }
+  .steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 5px; font-size: 15px; }
+  .lines { margin: 10px 0 0; border-top: 1px solid var(--sep); }
+  .line { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--sep); font-size: 14px; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .found { margin-top: 10px; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; background: var(--fill); }
+  .found.ok { background: rgba(27,138,62,.08); } .found.warn { background: rgba(178,80,0,.08); } .found.bad { background: rgba(196,53,28,.08); }
+  .found > b { display: block; margin-bottom: 4px; }
+  .found.ok > b { color: var(--in); } .found.warn > b { color: var(--warn); } .found.bad > b { color: var(--out); }
+  .f { display: flex; gap: 8px; margin-top: 3px; }
+  .f > span:first-child { width: 14px; flex: none; font-weight: 700; }
+  .f.ok > span:first-child { color: var(--in); } .f.warn > span:first-child { color: var(--warn); } .f.stop > span:first-child { color: var(--out); }
+  .f em { font-style: normal; font-size: 12px; color: var(--label3); margin-left: 4px; }
+  .strip { margin-top: 10px; border-radius: 10px; padding: 9px 12px; font-size: 14px; line-height: 1.4; }
+  .strip b { display: block; margin-bottom: 2px; }
+  .strip.bad { background: rgba(196,53,28,.08); color: var(--out); }
+  .strip.warn { background: rgba(178,80,0,.08); color: var(--warn); }
+
+  /* The log: who did what, when — a rail of dots, one per thing that happened. */
+  .log { list-style: none; margin: 12px 0 0; padding: 0 0 0 2px; font-size: 13.5px; color: var(--label2); }
+  .log li { position: relative; padding: 0 0 8px 18px; }
+  .log li::before { content: ''; position: absolute; left: 3px; top: 5px; width: 8px; height: 8px; border-radius: 99px; background: var(--label3); }
+  .log li::after { content: ''; position: absolute; left: 6.5px; top: 15px; bottom: -3px; width: 1px; background: var(--sep); }
+  .log li:last-child::after { display: none; }
+  .log li.person::before { background: var(--qb); } .log li.assistant::before { background: var(--mind); }
+  .log li.checker::before { background: var(--warn); } .log li.eesa::before, .log li.quickbooks::before { background: var(--in); }
+  .log li.bad::before { background: var(--out); }
+  .log li.next::before { background: transparent; border: 1.5px solid var(--qb); width: 7px; height: 7px; }
+  .log b { color: var(--label); font-weight: 600; }
+  .log time { color: var(--label3); font-size: 12px; margin-left: 4px; white-space: nowrap; }
+
+  .answer { display: flex; gap: 8px; margin-top: 10px; }
+  .answer input { flex: 1; min-width: 0; border: 1px solid var(--sep); border-radius: 12px; padding: 10px 12px; background: var(--bg); }
+  .actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .actions .meta { flex: 1 1 200px; text-align: left; }
+  .meta { font-size: 13px; color: var(--label2); margin-top: 2px; }
+  .btn { border: 1px solid var(--sep); background: var(--group); border-radius: 12px; padding: 9px 14px; cursor: pointer; font-size: 15px; line-height: 1.1; }
+  .btn.primary { background: var(--qb); border-color: var(--qb); color: #fff; font-weight: 650; }
+  .btn.primary:active { background: var(--qb-press); }
+  .btn.link { border: 0; background: transparent; color: var(--qb); font-weight: 600; padding: 6px 4px; }
+  .btn.danger { background: var(--out); border-color: transparent; color: #fff; }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  .pill { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; background: var(--fill); color: var(--label2); white-space: nowrap; }
+  .pill.wait { color: var(--warn); } .pill.yes { color: var(--in); } .pill.no { color: var(--out); } .pill.qb { color: var(--qb); background: var(--qb-soft); }
+  .card { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; }
+  .card h3 { margin: 0; font-size: 16.5px; line-height: 1.3; font-weight: 650; }
+  .card .say.bad, .say.bad { color: var(--out); }
+  .rows { margin-top: 10px; border-top: 1px solid var(--sep); }
+  .rowx { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--sep); font-size: 15px; }
+  .rowx .main { flex: 1; min-width: 0; } .rowx small { display: block; color: var(--label2); font-size: 13px; }
+  .empty { text-align: center; color: var(--label2); padding: 40px 10px; }
+
+  /* ── one place to type or speak ── */
+  .dock { border-top: 1px solid var(--sep); padding: 8px 16px calc(10px + var(--safe)); background: var(--bg); }
+  .dock .in { max-width: 760px; margin: 0 auto; }
   .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 0 8px; }
   .chips::-webkit-scrollbar { display: none; }
-  .chips button { flex: none; font-size: 14px; padding: 7px 13px; border-radius: 999px; color: var(--label);
-                  background: var(--group); border: 1px solid var(--sep); cursor: pointer; }
+  .chips button { flex: none; font-size: 14px; padding: 7px 13px; border-radius: 999px; background: var(--group); border: 1px solid var(--sep); cursor: pointer; }
   .composer { display: flex; gap: 8px; align-items: flex-end; }
-  .composer textarea { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; background: var(--group);
-                       border: 1px solid var(--sep); border-radius: 21px; padding: 10px 15px; resize: none;
-                       min-height: 44px; max-height: 160px; overflow-y: auto; }
+  .composer textarea { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; background: var(--group); border: 1px solid var(--sep);
+                       border-radius: 21px; padding: 10px 15px; resize: none; min-height: 44px; max-height: 160px; overflow-y: auto; }
   .round { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; border: 0; cursor: pointer; flex: none; }
   .round svg { width: 21px; height: 21px; }
   .round.mic { background: var(--group); color: var(--label); border: 1px solid var(--sep); }
   .round.mic.on { background: var(--out); color: #fff; border-color: transparent; animation: pulse 1.2s infinite; }
   .round.send { background: var(--qb); color: #fff; }
   .round[disabled] { opacity: .5; cursor: default; }
-  .hint { font-size: 12.5px; color: var(--label2); margin: 6px 4px 0; min-height: 0; }
-  .needs { position: absolute; left: 50%; transform: translateX(-50%); top: -46px; background: var(--label); color: var(--bg);
-           border: 0; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 650; cursor: pointer;
-           box-shadow: 0 6px 20px rgba(0,0,0,.18); white-space: nowrap; }
+  .hint { font-size: 12.5px; color: var(--label2); margin: 6px 4px 0; }
 
-  /* The moment money moves: a real dialog, not the browser's prompt. */
-  .veil { position: fixed; inset: 0; background: rgba(20,24,28,.45); display: flex; align-items: center;
-          justify-content: center; padding: 20px; z-index: 50; }
+  /* ── the moment money moves: a real dialog ── */
+  .veil { position: fixed; inset: 0; background: rgba(20,24,28,.45); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
   .dlg { background: var(--group); color: var(--label); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
          width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: 20px 20px 16px; }
   .dlg h2 { margin: 0 0 4px; font-size: 18px; }
@@ -206,51 +228,53 @@
   .dlg .hintx { font-size: 12px; color: var(--label3); margin-top: 4px; }
   .dlg .err { color: var(--out); font-size: 13px; margin-top: 8px; }
   .dlg .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-
-  /* Who you are, when you ask. */
   .sheet { position: fixed; inset: 0; z-index: 55; background: rgba(20,24,28,.4); display: flex; align-items: flex-end; justify-content: center; }
-  .sheet .panel { background: var(--bg); width: min(720px, 100%); border-radius: 18px 18px 0 0; padding: 18px 16px calc(22px + var(--safe));
-                  max-height: 85vh; overflow: auto; }
+  .sheet .panel { background: var(--bg); width: min(720px, 100%); border-radius: 18px 18px 0 0; padding: 18px 16px calc(22px + var(--safe)); max-height: 85vh; overflow: auto; }
   .sheet h2 { font-size: 20px; margin: 0 0 4px; }
   .sheet .rowx:last-child { border-bottom: 0; }
   .areas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .toast { position: fixed; left: 50%; bottom: calc(130px + var(--safe)); transform: translateX(-50%); background: var(--label);
+  .toast { position: fixed; left: 50%; bottom: calc(110px + var(--safe)); transform: translateX(-50%); background: var(--label);
            color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14.5px; font-weight: 600; z-index: 60;
            box-shadow: 0 8px 30px rgba(0,0,0,.2); max-width: calc(100% - 32px); text-align: center; }
 </style>
 </head>
 <body>
-<div class="page">
-  <header class="top">
-    <div class="mark" aria-hidden="true">qb</div>
-    <div class="t"><div class="co" id="co">QuickBooks</div><div class="role" id="role">Checking your access…</div></div>
-    <!-- Who you are is a question the page answers, not a screen. -->
-    <button class="avatar" id="who" hidden aria-label="Your QuickBooks access">·</button>
-  </header>
-
-  <div class="thread" id="earlier"></div>
-  <section id="now" aria-live="polite">
-    <div class="brief"><div class="skel" style="width:60%;height:24px"></div><div class="skel" style="width:90%"></div><div class="skel" style="width:75%"></div></div>
-  </section>
-  <div class="thread" id="thread" aria-live="polite"></div>
+<div class="shell" id="shell">
+  <aside class="side" aria-label="Conversations">
+    <div class="brand"><div class="mark" aria-hidden="true">qb</div><div class="co" id="co">QuickBooks</div></div>
+    <button class="sbtn new" data-act="new-chat">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="grow">New chat</span></button>
+    <button class="sbtn" id="needsBtn" data-act="open-needs">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 5h14l1 8v6H4v-6z"/></svg>
+      <span class="grow">Needs you</span><span class="badge" id="needsN" hidden>0</span></button>
+    <nav class="convs" id="convs"></nav>
+    <div class="me"><button class="sbtn" id="who" aria-label="Your QuickBooks access">
+      <span class="avatar" id="whoA">·</span><span class="grow"><span id="whoName">You</span><small id="role">Checking your access…</small></span></button></div>
+  </aside>
+  <div class="scrim" data-act="menu"></div>
+  <main class="main">
+    <header class="bar">
+      <button class="icon menu" data-act="menu" aria-label="Conversations">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="title" id="title">New chat</div>
+      <button class="icon" data-act="new-chat" aria-label="New chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+    </header>
+    <div class="scroll" id="scroll"><div class="col" id="view" aria-live="polite"></div></div>
+    <footer class="dock"><div class="in">
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea id="box" rows="1" placeholder="Ask or tell QuickBooks…" aria-label="Ask or tell QuickBooks"></textarea>
+        <button type="button" class="round mic" id="mic" hidden aria-label="Speak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button type="submit" class="round send" id="send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </form>
+      <div class="hint" id="hint" hidden></div>
+    </div></footer>
+  </main>
 </div>
-
-<footer class="dock">
-  <div class="in">
-    <button class="needs" id="needsPill" hidden></button>
-    <div class="chips" id="chips"></div>
-    <form class="composer" id="composer" autocomplete="off">
-      <textarea id="box" rows="1" placeholder="Ask or tell QuickBooks…" aria-label="Ask or tell QuickBooks"></textarea>
-      <button type="button" class="round mic" id="mic" hidden aria-label="Speak">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-      </button>
-      <button type="submit" class="round send" id="send" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-      </button>
-    </form>
-    <div class="hint" id="hint" hidden></div>
-  </div>
-</footer>
 
 <script>
 'use strict';
@@ -491,7 +515,7 @@ function md(src) {
       i += 2;
       while (i < lines.length && isRow(lines[i])) { body.push(cells(lines[i])); i++; }
       var num = function (v) { return /^[^A-Za-z]*[\d.,]+[^A-Za-z]*$/.test(v) ? ' class="n"' : ''; };
-      out.push('<div class="scroll"><table><thead><tr>'
+      out.push('<div class="scrollx"><table><thead><tr>'
         + head.map(function (h, x) { return '<th' + num(body.length ? (body[0][x] || '') : '') + '>' + inline(h) + '</th>'; }).join('')
         + '</tr></thead><tbody>'
         + body.map(function (r) { return '<tr>' + r.map(function (c) { return '<td' + num(c) + '>' + inline(c) + '</td>'; }).join('') + '</tr>'; }).join('')
@@ -551,11 +575,573 @@ var ST = {
   people: {},           // app -> qb_people
   review: {},           // app -> items brought in (open)
   setup: null,          // qb_pay_setup — only for payroll roles
-  activity: null,       // agent_activity
+  activity: null,
   errors: {},           // what could not be read, said on the page
-  open: {},             // which cards are showing their detail
-  inline: {},           // request / change ids already shown under an answer
+  open: {},             // which details are open
+  inline: {},
+  view: 'new',          // new | needs | conv
+  conv: '',             // the open conversation
+  convs: [],            // the sidebar
+  items: null,          // the open conversation's timeline
 };
+var asking = false;
+
+/** The loaders for the brief and "needs you" call this when they land. */
+function paintNow() { paintView(); paintSide(); }
+
+// ── the sidebar: New chat, Needs you, and every conversation ────────────
+async function loadConvs() {
+  try {
+    var r = await call('specialist_chat_conversations', { limit: 50 });
+    ST.convs = r.conversations || [];
+    delete ST.errors.convs;
+  } catch (e) { ST.errors.convs = e.message; }
+  paintSide();
+  if (ST.view === 'conv') $('#title').textContent = convTitle(ST.conv);
+}
+function dayWord(iso) {
+  var d = new Date(iso), now = new Date();
+  var days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  return days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? 'This week' : 'Earlier';
+}
+function paintSide() {
+  var html = '', last = '';
+  (ST.convs || []).forEach(function (c) {
+    var g = c.id === 'earlier' ? 'Before chats' : dayWord(c.last_at);
+    if (g !== last) { html += '<div class="glab">' + g + '</div>'; last = g; }
+    html += '<button class="sbtn' + (ST.view === 'conv' && ST.conv === c.id ? ' on' : '') + '" data-act="open-conv" data-id="'
+      + esc(c.id) + '" title="' + esc(c.title) + '"><span class="grow">' + esc(c.title || 'Untitled') + '</span></button>';
+  });
+  if (ST.errors.convs) html += '<div class="glab" style="text-transform:none;letter-spacing:0;color:var(--out)">' + esc(ST.errors.convs) + '</div>';
+  else if (!html) html = '<div class="glab" style="text-transform:none;letter-spacing:0">Your conversations appear here.</div>';
+  $('#convs').innerHTML = html;
+  var n = decisions();
+  $('#needsN').hidden = !n;
+  $('#needsN').textContent = String(n);
+  $('#needsBtn').classList.toggle('on', ST.view === 'needs');
+}
+function decisions() { return needCards().filter(function (c) { return c.decide; }).length; }
+function convTitle(id) {
+  var c = (ST.convs || []).filter(function (x) { return x.id === id; })[0];
+  return c ? c.title : (ST.pendingTitle || 'Conversation');
+}
+
+// ── the three views: a new chat, what needs you, a conversation ─────────
+function show(view, conv) {
+  ST.view = view;
+  ST.conv = conv || '';
+  $('#shell').classList.remove('open');
+  $('#title').textContent = view === 'needs' ? 'Needs you' : view === 'new' ? 'New chat' : convTitle(ST.conv);
+  paintView(); paintSide(); paintChips();
+}
+async function openConv(id) {
+  ST.items = null;
+  show('conv', id);
+  await loadTimeline();
+  scrollToEnd();
+}
+async function loadTimeline() {
+  var conv = ST.conv;
+  if (!conv) return;
+  try {
+    var r = await call('qb_chat', { conversation: conv });
+    if (ST.conv !== conv) return;   // moved on while it loaded
+    ST.items = r.items || [];
+    delete ST.errors.conv;
+  } catch (e) {
+    ST.errors.conv = e.message;
+    ST.items = ST.items || [];
+  }
+  paintView();
+  watchConv();
+}
+
+/** Redraw the view without losing the reader's place or a half-typed answer. */
+function paintView() {
+  var box = $('#view'), sc = $('#scroll');
+  var atEnd = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80, top = sc.scrollTop;
+  var typed = {};
+  box.querySelectorAll('input[data-answer]').forEach(function (i) { if (i.value) typed[i.getAttribute('data-answer')] = i.value; });
+  box.innerHTML = ST.view === 'needs' ? needsView() : ST.view === 'conv' ? convView() : welcomeView();
+  Object.keys(typed).forEach(function (k) {
+    var i = box.querySelector('input[data-answer="' + k + '"]');
+    if (i) i.value = typed[k];
+  });
+  if (ST.view === 'conv' && atEnd) scrollToEnd(); else sc.scrollTop = top;
+}
+function scrollToEnd() { var sc = $('#scroll'); sc.scrollTop = sc.scrollHeight; }
+
+function greeting() {
+  var first = ((ACCESS && ACCESS.name) || '').trim().split(/\s+/)[0] || '';
+  var hr = new Date().getHours();
+  return (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (first ? ', ' + first : '') + '.';
+}
+function welcomeView() {
+  var b = ST.brief || { loading: true, lines: [], errors: [] };
+  var n = decisions();
+  var html = '<div class="brief"><h1 class="hello">' + esc(b.hello || greeting()) + '</h1>';
+  if (b.loading) html += '<div class="skel" style="width:88%"></div><div class="skel" style="width:70%"></div>';
+  else {
+    html += b.lines.map(function (l) { return '<p>' + l + '</p>'; }).join('');
+    html += b.errors.map(function (e) { return '<p class="quiet">' + esc(e) + '</p>'; }).join('');
+    if (!b.lines.length && !b.errors.length && ACCESS && !ACCESS.has_access) {
+      html += '<p>' + esc(ACCESS.note || 'No QuickBooks role has been recorded for you yet, so nothing from QuickBooks will open. Whoever looks after QuickBooks can add it.') + '</p>';
+    }
+  }
+  html += n ? '<p><button class="btn link" style="padding:0;font-size:17px" data-act="open-needs">'
+            + count(n, 'thing needs', 'things need') + ' you →</button></p>'
+          : (ST.changes ? '<p class="quiet">Nothing needs you right now.</p>' : '');
+  html += '<p class="quiet" style="margin-top:16px">Ask anything about the books, or tell me what to set up — '
+    + '“add Alex at $18 an hour”, “post this week’s hours”. Nothing changes until you say OK.</p></div>';
+  return html;
+}
+function needsView() {
+  var html = '<div class="h2">Needs you</div><p class="quiet" style="margin:0 0 4px">Everything waiting on you, from every conversation.</p>';
+  if (!ST.changes && !ST.errors.changes) return html + '<div class="skel"></div><div class="skel" style="width:70%"></div>';
+  if (ST.errors.changes) html += '<div class="card"><p class="say bad">I could not read what is waiting for approval: ' + esc(ST.errors.changes) + '</p></div>';
+  if (ST.errors.apps) html += '<div class="card"><p class="say bad">I could not read the connected apps: ' + esc(ST.errors.apps) + '</p></div>';
+  var cards = needCards();
+  html += cards.length ? cards.map(function (c) { return c.html; }).join('') : '<div class="empty">Nothing needs you right now.</div>';
+  var mine = ((ST.changes && ST.changes.my_requests) || []).filter(function (c) { return c.status === 'PENDING'; });
+  if (mine.length) {
+    html += '<div class="glab" style="margin:18px 4px 0">Waiting on somebody else</div>'
+      + mine.map(function (c) { return changeCard(c, true); }).join('');
+  }
+  return html;
+}
+function convView() {
+  if (ST.items === null) return '<div class="skel" style="width:40%;align-self:flex-end"></div><div class="skel" style="width:80%"></div>';
+  var html = ST.errors.conv ? '<div class="card"><p class="say bad">' + esc(ST.errors.conv) + '</p></div>' : '';
+  if (!ST.items.length && !ST.errors.conv) html += '<div class="empty">Ask anything to start.</div>';
+  return html + ST.items.map(function (it) {
+    if (it.type === 'turn') return turnView(it.turn);
+    if (it.type === 'request') return requestCard(it.request, it.app || 'attendance');
+    if (it.type === 'change') return changeCard(it.change, true);
+    return '';
+  }).join('');
+}
+
+// ── a question and its answer, with what the agent did ──────────────────
+function clock(iso) {
+  try { return iso ? new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : ''; }
+  catch (e) { return ''; }
+}
+function turnView(t) {
+  var a;
+  if (t.status === 'DONE') a = md(t.answer);
+  // Never a silent failure: the question stays on screen with the reason.
+  else if (t.status === 'FAILED') a = '<p style="color:var(--out)">' + esc(t.error || 'No answer came back.') + '</p>';
+  else a = '<p class="thinking working">' + (t.slow ? 'Still working — a long report takes a while' : 'Working on it') + '</p>';
+  var did = t.actions || [];
+  var key = 'did:' + t.id;
+  var log = did.length ? '<details class="did" data-keep="' + esc(key) + '"' + (ST.open[key] ? ' open' : '') + '><summary>What I did · '
+      + did.length + '</summary><ul class="log">' + did.map(function (x) {
+        return '<li class="' + (x.outcome === 'ok' || x.outcome === 'nothing' ? 'eesa' : 'bad') + '">' + esc(x.text)
+          + '<time>' + esc(clock(x.at)) + '</time></li>';
+      }).join('') + '</ul></details>' : '';
+  return '<div class="turn me"><div class="bubble"><p>' + esc(t.question) + '</p></div></div>'
+    + '<div class="turn" data-turn="' + esc(t.id) + '"><div class="bubble">' + a + '</div>' + log + '</div>';
+}
+
+// ── flows: a request or a change, its log, its one decision ─────────────
+var BY = { person: 'You', assistant: 'Attendance assistant', rules: 'Rules', checker: 'Checker',
+           eesa: 'Eesa', quickbooks: 'QuickBooks' };
+/** The log: who did what, when; `next` is what the flow is waiting on now. */
+function logView(entries, next) {
+  var me = (ACCESS && ACCESS.email) || '';
+  return '<ul class="log">' + entries.map(function (e) {
+    var who = e.by === 'person' ? (e.who && e.who !== me ? e.who : 'You') : (BY[e.by] || e.by);
+    return '<li class="' + esc(e.by) + (e.ok === false ? ' bad' : '') + '"><b>' + esc(who) + '</b> · ' + esc(e.text)
+      + '<time>' + esc(clock(e.at)) + '</time></li>';
+  }).join('') + (next ? '<li class="next">' + next + '</li>' : '') + '</ul>';
+}
+function requestCard(q, app) {
+  var icon = { ok: '✓', warn: '!', stop: '✕' };
+  var verdict = { ok: ['ok', 'Checked — looks right'], attention: ['warn', 'Checked — look at these first'],
+                  stop: ['bad', 'Checked — this can’t be approved as it is'] }[q.verdict || (q.blocked ? 'stop' : 'attention')];
+  var pill = { DRAFTING: 'wait', CHECKING: 'wait', READY: 'qb', NEEDS_INFO: 'wait', APPLYING: 'wait', DONE: 'yes', FAILED: 'no' }[q.status] || '';
+  var steps = q.steps.length && ['CHECKING', 'READY', 'APPLYING'].indexOf(q.status) !== -1
+    ? '<ol class="steps">' + q.steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' : '';
+  var body = '', next = '';
+  if (q.status === 'DRAFTING') next = '<span class="working">The attendance assistant is drafting it</span>';
+  else if (q.status === 'CHECKING') next = '<span class="working">A checker is looking it over</span>';
+  else if (q.status === 'APPLYING') next = '<span class="working">Applying</span>';
+  else if (q.status === 'NEEDS_INFO') {
+    next = 'Waiting for your answer';
+    body = '<p class="ask">' + esc(q.question) + '</p>'
+      + '<div class="answer"><input data-answer="' + esc(q.id) + '" placeholder="Your answer" aria-label="Your answer">'
+      + '<button class="btn primary" data-act="answer" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Answer</button></div>'
+      + '<div class="actions"><button class="btn link" data-act="discard-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Never mind</button></div>';
+  } else if (q.status === 'READY') {
+    next = 'Waiting for you';
+    body = (q.summary ? '<p class="say">' + esc(q.summary) + '</p>' : '')
+      + '<div class="found ' + verdict[0] + '"><b>' + verdict[1] + '</b>'
+      + q.findings.map(function (f) {
+          return '<div class="f ' + esc(f.level) + '"><span>' + (icon[f.level] || '·') + '</span><span>' + esc(f.text)
+            + ' <em>' + (f.by === 'rules' ? 'rules' : 'checker') + '</em></span></div>';
+        }).join('') + '</div>'
+      + '<div class="actions"><span class="meta">Each step runs as you, inside your QuickBooks role.</span>'
+      + '<button class="btn" data-act="discard-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Discard</button>'
+      + '<button class="btn primary" data-act="approve-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '"'
+      + (q.blocked ? ' disabled' : '') + '>Approve</button></div>';
+  } else if (q.error) body = '<p class="say bad">' + esc(q.error) + '</p>';
+  // A request from before logs were kept still shows how it ended.
+  var entries = (q.log && q.log.length) ? q.log
+    : [{ by: 'person', who: q.asked_by, text: 'Asked', at: q.created_at }].concat((q.results || []).map(function (r) {
+        return { by: 'eesa', text: r.text, ok: r.ok };
+      }));
+  return '<div class="flow" data-req="' + esc(q.id) + '"><div class="fhead"><div><div class="kicker">Attendance · request</div>'
+    + '<h3>“' + esc(q.words) + '”</h3></div><span class="pill ' + pill + '">' + esc(q.status_label) + '</span></div>'
+    + steps + body + logView(entries, next) + '</div>';
+}
+
+var RAIL = { PENDING: 'wait', APPROVED: 'qb', EXECUTING: 'qb', EXECUTED: 'yes', VERIFIED: 'yes', FAILED: 'no', REJECTED: 'no' };
+/**
+ * A change to QuickBooks as a flow. A person reading it must be able to answer,
+ * without opening anything, whether this is a real financial action, whether it
+ * has happened yet, exactly what will happen and to whom, and who or what is
+ * stopping it — so the amount is the largest thing on it, and its log says who
+ * asked, who approved, when it was sent and whether QuickBooks holds it.
+ */
+function changeCard(c, mine) {
+  var p = (c.payload && c.payload.params) || {};
+  var L = p.Line || p.line_items || [];
+  var op = c.operation || 'create';
+  var lines = '';
+  if (op === 'create' && Array.isArray(L) && L.length) {
+    // A line's money is Amount where Intuit gives one, and qty × unit_price
+    // where it gives those instead — the same rule the validator applies.
+    var lineAmt = function (l) {
+      if (l.Amount != null || l.amount != null) return Number(l.Amount != null ? l.Amount : l.amount);
+      var q = l.qty != null ? l.qty : (l.Qty != null ? l.Qty : l.quantity);
+      var u = l.unit_price != null ? l.unit_price : l.UnitPrice;
+      return (q != null && u != null) ? Number(q) * Number(u) : 0;
+    };
+    lines = '<div class="lines">' + L.slice(0, 8).map(function (l) {
+      var q = l.qty != null ? l.qty : (l.Qty != null ? l.Qty : l.quantity);
+      return '<div class="line"><span>' + esc(l.Description || l.description || 'Line') + (q != null && Number(q) !== 1 ? ' × ' + esc(String(q)) : '')
+        + '</span><span class="num">' + money(lineAmt(l)) + '</span></div>';
+    }).join('') + '</div>';
+  }
+  var opBlock = '';
+  if (op === 'update' && Array.isArray(c.changes) && c.changes.length) {
+    opBlock = '<div class="lines"><div class="line" style="font-weight:600"><span>What changes</span><span>before → after</span></div>'
+      + c.changes.map(function (x) {
+          return '<div class="line"><span>' + esc(x.field) + '</span><span>' + esc(x.before === '' ? '—' : x.before) + ' → <b>' + esc(x.after === '' ? '—' : x.after) + '</b></span></div>';
+        }).join('') + '</div>';
+  } else if (op === 'delete' || op === 'void') {
+    opBlock = '<div class="strip bad"><b>This will ' + (c.kind === 'invoice' ? 'void' : 'delete') + ' the ' + esc(c.kind || 'record')
+      + '</b><div>Cannot be undone from Eesa. Approving needs the amount typed back.</div></div>';
+  }
+  var v = c.validation || {}, val = '';
+  if ((v.errors || []).length) val = '<div class="strip bad"><b>This cannot be approved yet</b>' + v.errors.map(function (e) { return '<div>• ' + esc(e) + '</div>'; }).join('') + '</div>';
+  else if ((v.warnings || []).length) val = '<div class="strip warn"><b>Check before approving</b>' + v.warnings.map(function (e) { return '<div>• ' + esc(e) + '</div>'; }).join('') + '</div>';
+
+  var e = [{ by: 'person', who: c.requested_by, text: 'Asked for it', at: c.created_at }];
+  (c.decisions || []).forEach(function (d) {
+    e.push({ by: 'person', who: d.by, ok: d.status !== 'REJECTED', at: d.at,
+             text: d.status === 'REJECTED' ? 'Turned it down' + (d.reason ? ' — ' + d.reason : '')
+                 : d.status === 'APPROVED' ? 'Approved' + (d.note ? ' — ' + d.note : '') : String(d.status).toLowerCase() });
+  });
+  var ex = c.last_execution;
+  if (ex) e.push({ by: 'quickbooks', ok: ex.status !== 'FAILED', at: ex.at,
+                   text: (ex.status === 'FAILED' ? 'Refused it — ' + (ex.error || c.status_reason || 'no reason given') : 'Sent')
+                     + (ex.attempt > 1 ? ' (try ' + ex.attempt + ')' : '') });
+  if (c.status === 'VERIFIED') e.push({ by: 'quickbooks', at: ex && ex.at, text: 'Checked — it is in QuickBooks'
+      + (c.quickbooks_id ? ' · #' + c.quickbooks_id : '') + (c.quickbooks_doc_number ? ' · No. ' + c.quickbooks_doc_number : '') });
+  if (c.status === 'CANCELLED') e.push({ by: 'person', text: 'Cancelled' });
+  var next = c.status === 'PENDING'
+      ? (mine ? 'Waiting for ' + c.approvals_received + ' of ' + c.required_approvals + ' approval' + (c.required_approvals === 1 ? '' : 's')
+              : 'Waiting for you' + (c.high_risk ? ' — the amount is typed back to approve' : ''))
+    : (c.status === 'APPROVED' || c.status === 'EXECUTING') ? '<span class="working">Sending to QuickBooks</span>'
+    : c.status === 'EXECUTED' ? '<span class="working">Checking it landed</span>' : '';
+
+  var actions = '';
+  if (c.status === 'FAILED' && c.can_retry) {
+    actions = '<div class="actions"><span class="meta">The approvals still stand; the same change is sent again.</span>'
+      + '<button class="btn primary" data-act="retry" data-id="' + esc(c.id) + '">Try again</button></div>';
+  } else if (c.status === 'PENDING' && !mine) {
+    var blocked = (c.blockers || []).length ? c.blockers[0] : '';
+    actions = '<div class="actions">' + (blocked ? '<span class="meta">' + esc(blocked) + '</span>' : '')
+      + '<button class="btn" data-act="reject" data-id="' + esc(c.id) + '"' + (blocked ? ' disabled' : '') + '>Turn down</button>'
+      + '<button class="btn primary" data-act="approve" data-id="' + esc(c.id) + '"' + (blocked ? ' disabled' : '') + '>Approve</button></div>';
+  } else if (c.status === 'PENDING' && mine) {
+    actions = '<div class="actions"><button class="btn" data-act="cancel" data-id="' + esc(c.id) + '">Cancel request</button></div>';
+  }
+  var who = c.counterparty_name ? '<div class="meta">' + (c.counterparty_kind === 'vendor' ? 'Vendor' : 'Customer') + ': ' + esc(c.counterparty_name) + '</div>' : '';
+  return '<div class="flow" data-change="' + esc(c.id) + '" data-mine="' + (mine ? '1' : '') + '">'
+    + '<div class="fhead"><div><div class="kicker">Change to QuickBooks · ' + esc(c.status_label || c.status) + '</div>'
+    + '<h3>' + (op === 'update' ? 'Edit: ' : (op === 'delete' || op === 'void') ? 'Delete: ' : '') + esc(c.summary) + '</h3>' + who + '</div>'
+    + '<div class="amt">' + money(c.amount) + '</div></div>'
+    + lines + opBlock + val + logView(e, next) + actions + '</div>';
+}
+function pillClass(st) { return RAIL[st] || ''; }
+
+// ── keeping it live ─────────────────────────────────────────────────────
+// A draft takes the assistant and the checker 20–60 seconds; a flow says what
+// it is waiting on and changes on its own when it moves.
+var watchTimer = null, convTimer = null;
+function watch() {
+  clearTimeout(watchTimer);
+  var busy = connected().some(function (a) {
+    return (((ST.requests[a.key] || {}).open) || []).some(function (q) { return ['DRAFTING', 'CHECKING', 'APPLYING'].indexOf(q.status) !== -1; });
+  });
+  if (busy) watchTimer = setTimeout(async function () {
+    await Promise.all(connected().map(function (a) { return loadRequests(a.key); }));
+    paintNow(); watch();
+  }, 2500);
+}
+function watchConv() {
+  clearTimeout(convTimer);
+  if (ST.view !== 'conv' || !ST.items) return;
+  var busy = ST.items.some(function (it) {
+    return (it.type === 'request' && ['DRAFTING', 'CHECKING', 'APPLYING'].indexOf(it.request.status) !== -1)
+      || (it.type === 'change' && ['APPROVED', 'EXECUTING', 'EXECUTED'].indexOf(it.change.status) !== -1)
+      || (it.type === 'turn' && (it.turn.status === 'QUEUED' || it.turn.status === 'RUNNING'));
+  });
+  if (busy && !asking) convTimer = setTimeout(loadTimeline, 3000);
+}
+function refresh() { return ST.view === 'conv' ? loadTimeline().then(loadNeeds) : loadNeeds(); }
+
+// ── asking: everything goes to the QuickBooks agent ─────────────────────
+/**
+ * Ask, then poll. Never wait on the answer over one connection: the edge gives
+ * up on any response slower than 30 seconds and answers with a 500 of its own,
+ * and an agent turn takes 12–60s. The question is stored, a worker answers it,
+ * and this polls the row every two seconds — three minutes at most, then it
+ * says so rather than spinning. A question outside a conversation starts one.
+ */
+async function sendMessage(text) {
+  text = String(text || '').trim();
+  if (asking || !text) return;
+  asking = true; stopListening();
+  $('#send').disabled = true;
+  $('#box').value = ''; autosize();
+  if (ST.view !== 'conv') { ST.items = []; ST.pendingTitle = text.slice(0, 80); show('conv', ''); }
+  var t = { id: 'pending', question: text, status: 'QUEUED', answer: '', actions: [] };
+  ST.items = (ST.items || []).concat([{ type: 'turn', at: new Date().toISOString(), turn: t }]);
+  paintView(); scrollToEnd();
+  var conv = ST.conv;
+  try {
+    // `specialist` is not sent: Eesa pins it to this plugin.
+    var sent = await platform('specialist_chat_send', conv ? { question: text, conversation: conv } : { question: text });
+    if (!sent.ok) throw new Error(sent.error || 'Could not send that.');
+    Object.assign(t, sent.turn, { actions: [] });
+    if (!conv) { conv = ST.conv = sent.turn.conversation; loadConvs(); }
+    for (var i = 0; i < 90 && t.status !== 'DONE' && t.status !== 'FAILED'; i++) {
+      await pause(2000);
+      if (i === 15) { t.slow = true; if (ST.conv === conv) paintView(); }
+      var st = await platform('specialist_chat_status', { turn_id: t.id });
+      if (st.ok) Object.assign(t, st.turn);
+    }
+    if (t.status !== 'DONE' && t.status !== 'FAILED') {
+      t.status = 'FAILED';
+      t.error = 'This is taking longer than three minutes. It is still being worked on — it will be here when you come back.';
+    }
+    // The answer, what the agent did, and any flow it started — from the server.
+    if (ST.conv === conv && ST.view === 'conv') await loadTimeline(); else paintView();
+    loadConvs(); loadNeeds();
+  } catch (e) {
+    t.status = 'FAILED'; t.error = e.message;
+    paintView();
+  } finally {
+    asking = false;
+    $('#send').disabled = false;
+    watchConv();   // a flow the answer started keeps moving on screen
+  }
+}
+
+// ── the composer: type or speak ─────────────────────────────────────────
+function autosize() {
+  var b = $('#box'); b.style.height = 'auto'; b.style.height = Math.min(b.scrollHeight, 160) + 'px';
+}
+$('#box').addEventListener('input', autosize);
+$('#box').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage($('#box').value); }
+});
+$('#composer').addEventListener('submit', function (e) { e.preventDefault(); sendMessage($('#box').value); });
+
+/** Suggestions follow the role, and only open a new chat. */
+function paintChips() {
+  var v = viewer(), conn = connected().length, chips = [];
+  if (ST.view === 'new') {
+    if (may('reports_financial')) chips.push(['ask', 'How did last month go?']);
+    if (may('reports_ar')) chips.push(['ask', 'Who owes us the most?']);
+    if (may('reports_ap')) chips.push(['ask', 'What bills are due soon?']);
+    if (conn && v.posts_time) chips.push(['ask', 'Post this week’s approved hours']);
+    if (conn && v.sets_pay) chips.push(['fill', 'Set pay for ']);
+    if (may('sales')) chips.push(['fill', 'Draft an invoice for ']);
+  }
+  $('#chips').hidden = !chips.length;
+  $('#chips').innerHTML = chips.map(function (c, i) {
+    return '<button type="button" data-chip="' + i + '">' + esc(c[1].trim()) + (c[0] === 'fill' ? '…' : '') + '</button>';
+  }).join('');
+  $('#chips').querySelectorAll('button').forEach(function (b, i) {
+    b.addEventListener('click', function () {
+      if (chips[i][0] === 'ask') return sendMessage(chips[i][1]);
+      $('#box').value = chips[i][1]; autosize(); $('#box').focus();
+    });
+  });
+}
+
+// ── decisions, and the rest of what a tap does ──────────────────────────
+async function pollChange(id) {
+  for (var i = 0; i < 30; i++) {
+    await pause(2000);
+    var st = await platform('quickbooks_change_status', { change_id: id }).catch(function () { return { ok: false }; });
+    if (!st.ok) return;
+    var c = st.change, s = c.status;
+    document.querySelectorAll('[data-change="' + c.id + '"]').forEach(function (el) {
+      el.outerHTML = changeCard(c, el.getAttribute('data-mine') === '1');
+    });
+    if (s === 'APPROVED' || s === 'EXECUTING' || (s === 'FAILED' && i < 2)) continue;
+    if (s === 'VERIFIED' || s === 'EXECUTED') toast(c.summary + ' — in QuickBooks' + (s === 'VERIFIED' ? ', checked' : ''));
+    else if (s === 'FAILED') toast('QuickBooks refused ' + c.summary + (c.status_reason ? ': ' + c.status_reason : ''));
+    await refresh();
+    return;
+  }
+}
+function findChange(id) {
+  var q = ST.changes || {};
+  var all = (q.waiting_on_me || []).concat(q.my_requests || [], q.failed || []);
+  (ST.items || []).forEach(function (it) { if (it.type === 'change') all.push(it.change); });
+  return all.filter(function (x) { return x.id === id; })[0];
+}
+function findRequest(app, id) {
+  var r = ST.requests[app] || {}, all = (r.open || []).concat(r.recent || []);
+  (ST.items || []).forEach(function (it) { if (it.type === 'request') all.push(it.request); });
+  return all.filter(function (x) { return x.id === id; })[0];
+}
+
+document.addEventListener('toggle', function (e) {
+  var d = e.target;
+  if (d.matches && d.matches('details[data-keep]')) ST.open[d.getAttribute('data-keep')] = d.open;
+}, true);
+$('#who').addEventListener('click', openAccess);
+
+document.addEventListener('click', async function (e) {
+  var b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  var act = b.dataset.act, id = b.dataset.id, app = b.dataset.app;
+  try {
+    if (act === 'menu') { $('#shell').classList.toggle('open'); return; }
+    if (act === 'new-chat') { ST.items = null; show('new'); $('#box').focus(); return; }
+    if (act === 'open-needs') { show('needs'); loadNeeds(); return; }
+    if (act === 'open-conv') { return openConv(id); }
+    if (act === 'approve' || act === 'reject' || act === 'cancel' || act === 'retry') {
+      var c = findChange(id);
+      if (!c) return;
+      var done = await { approve: approveDialog, reject: rejectDialog, cancel: cancelDialog, retry: retryDialog }[act](c);
+      if (!done) return;
+      toast({ approve: 'Approved — sending it to QuickBooks', reject: 'Turned down — they have been told why',
+              cancel: 'Cancelled — nothing was sent', retry: 'Sending it again' }[act]);
+      await refresh();
+      if (act === 'approve' || act === 'retry') pollChange(id);
+      return;
+    }
+    if (act === 'approve-req') {
+      // The card is the confirmation: it shows every step and what was checked.
+      b.disabled = true; b.textContent = 'Applying…';
+      var r = await call('qb_requests', { app: app, action: 'approve', id: id });
+      toast(r.request.status === 'DONE' ? 'Done — each step is in its log' : 'Stopped — its log says where');
+      await loadRequests(app); await refresh();
+      return;
+    }
+    if (act === 'discard-req') {
+      await call('qb_requests', { app: app, action: 'discard', id: id });
+      await loadRequests(app); await refresh();
+      return;
+    }
+    if (act === 'answer') {
+      var q = findRequest(app, id);
+      var input = document.querySelector('[data-answer="' + id + '"]');
+      var ans = input ? input.value.trim() : '';
+      if (!ans || !q) { if (input) input.focus(); return; }
+      b.disabled = true;
+      // The answer and the question go back together, as one request, in the
+      // conversation the question was asked in.
+      await call('qb_requests', { app: app, action: 'ask', words: q.words + '\n' + ans, conversation: q.conversation || ST.conv });
+      await call('qb_requests', { app: app, action: 'discard', id: id }).catch(function () {});
+      await loadRequests(app); await refresh(); watch();
+      return;
+    }
+    if (act === 'sort-people') {
+      // Handed to the agent like anything else said here: a new conversation.
+      return sendMessage('Match everybody who is not matched to QuickBooks yet to their QuickBooks employee, or add them '
+        + 'if they are not there. Ask me about anybody you are not sure of.');
+    }
+    if (act === 'post') {
+      var me = (ACCESS && ACCESS.email) || '';
+      var ids = (((ST.review[app] || {}).items) || []).filter(function (i) { return i.status === 'REVIEW' && i.task && i.task.owner === me; })
+        .map(function (i) { return i.id; });
+      if (!ids.length) return;
+      b.disabled = true; b.textContent = 'Posting…';
+      var out = await call('qb_review', { app: app, action: 'post', ids: ids });
+      toast(plural(out.posted.length, 'entry', 'entries') + ' sent to QuickBooks' + (out.refused.length ? ' · ' + out.refused.length + ' refused: ' + out.refused[0].error : ''));
+      await loadNeeds();
+      setTimeout(loadNeeds, 6000);
+      return;
+    }
+    if (act === 'skip-item') {
+      var ok = await dialog({ title: 'Don’t post this?', ok: 'Don’t post', sub: 'It stays out of QuickBooks, and no task brings it back.',
+        body: '<label for="skipWhy">Why, so the team knows</label><textarea id="skipWhy" rows="2" maxlength="300" placeholder="e.g. Training day, not paid"></textarea>',
+        validate: function (v) { return v.querySelector('#skipWhy').value.trim().length >= 3 ? null : 'why'; },
+        collect: function (v) { return { why: v.querySelector('#skipWhy').value.trim() }; },
+        submit: function (v) { return call('qb_review', { app: app, action: 'exclude', ids: [id], reason: v.why }); } });
+      if (ok) await loadNeeds();
+      return;
+    }
+    if (act === 'bring-back') {
+      await call('qb_review', { app: app, action: 'bring_back', ids: [id] });
+      toast('Brought back — it is checked again on the next run');
+      await loadNeeds();
+      return;
+    }
+    if (act === 'draft') {
+      await call('qb_pay_save', { what: b.dataset.what, action: b.dataset.do, id: id });
+      toast(b.dataset.do === 'confirm' ? 'Confirmed' : 'Discarded');
+      await loadNeeds();
+      return;
+    }
+    if (act === 'connect') {
+      b.disabled = true; b.textContent = 'Connecting…';
+      await call('qb_app_connect', { app: app, action: 'connect' });
+      toast('Connected — read only');
+      await loadNeeds(); paintChips();
+      return;
+    }
+    if (act === 'toggle') { ST.open[b.dataset.key] = !ST.open[b.dataset.key]; paintView(); return; }
+  } catch (err) {
+    // The expected outcomes of a race, said as what they are.
+    if (err.code === 'already_executed') toast('Somebody else approved this first. It has already been sent.');
+    else if (err.code === 'changed_since') toast('This changed in QuickBooks since it was proposed. Ask for it again.');
+    else toast(err.message);
+    refresh().catch(function () {});
+  }
+});
+
+// ── first paint ─────────────────────────────────────────────────────────
+// The role comes FIRST and everything else waits on it: what the brief reads,
+// which suggestions appear, which cards can exist.
+async function boot() {
+  try {
+    ACCESS = await platform('quickbooks_my_access', {});
+    paintWho(ACCESS);
+  } catch (e) {
+    ACCESS = { areas: [], has_access: false, note: e.message };
+    $('#role').textContent = 'Could not check your access';
+  }
+  paintView();
+  loadConvs();
+  loadBrief();
+  await loadNeeds();
+  paintChips();
+  // Keep what needs you, and the history, current while the page stays open.
+  setInterval(function () {
+    if (!asking && document.visibilityState === 'visible') { loadNeeds(); loadConvs(); }
+  }, 60000);
+}
 
 // ── the brief: where things stand, in words ─────────────────────────────
 async function loadBrief() {
@@ -618,11 +1204,7 @@ async function loadNeeds() {
       .catch(function (e) { ST.errors.changes = e.message; }),
     ACCESS && ACCESS.has_access ? call('qb_apps', {}).then(function (r) { ST.apps = r; delete ST.errors.apps; })
       .catch(function (e) { ST.errors.apps = e.message; }) : null,
-    // What was DONE: changes in QuickBooks. The log also holds every read —
-    // this page's own brief among them — which would bury the few that matter.
-    platform('agent_activity', { plugin: 'quickbooks', limit: 60 }).then(function (r) {
-      ST.activity = (r.ok ? r.actions || [] : []).filter(function (a) { return a.kind === 'write'; });
-    }).catch(function () { ST.activity = []; }),
+
   ]);
   paintNow();
   var v = viewer(), conn = connected();
@@ -682,199 +1264,6 @@ function needCards() {
   });
   void me;
   return out;
-}
-
-// ── painting the part that changes ──────────────────────────────────────
-function paintNow() {
-  var b = ST.brief || { loading: true, lines: [], errors: [] };
-  var all = needCards();
-  var decide = all.filter(function (c) { return c.decide; }).length;
-  var cards = all.filter(function (c) { return !c.inline; });
-  var html = '<div class="brief"><h1 class="hello">' + esc(b.hello || '') + '</h1>';
-  if (b.loading) html += '<div class="skel" style="width:88%"></div><div class="skel" style="width:70%"></div>';
-  else {
-    html += b.lines.map(function (l) { return '<p>' + l + '</p>'; }).join('');
-    html += b.errors.map(function (e) { return '<p class="quiet">' + esc(e) + '</p>'; }).join('');
-    if (!b.lines.length && !b.errors.length && ACCESS && !ACCESS.has_access) {
-      html += '<p>' + esc(ACCESS.note || 'No QuickBooks role has been recorded for you yet, so nothing from QuickBooks will open. Whoever looks after QuickBooks can add it.') + '</p>';
-    }
-  }
-  var loadingNeeds = !ST.changes && !ST.errors.changes;
-  html += loadingNeeds ? '<p class="quiet">Checking what needs you…</p>'
-    : decide ? '<p><button class="btn link" style="padding:0;font-size:17px" data-act="to-needs">' + count(decide, 'thing needs', 'things need') + ' you.</button></p>'
-    : '<p class="quiet">Nothing needs you right now.</p>';
-  html += '</div>';
-  if (cards.length) {
-    html += '<div class="label">Needs you' + (decide ? ' <span class="n">' + decide + '</span>' : '') + '</div>'
-      + cards.map(function (c) { return '<div data-key="' + esc(c.key) + '">' + c.html + '</div>'; }).join('');
-  }
-  if (ST.errors.changes) html += '<div class="card"><p class="say bad">I could not read what is waiting for approval: ' + esc(ST.errors.changes) + '</p></div>';
-  if (ST.errors.apps) html += '<div class="card"><p class="say bad">I could not read the connected apps: ' + esc(ST.errors.apps) + '</p></div>';
-  html += laterBlock();
-  $('#now').innerHTML = html;
-  NEEDS = decide;
-  FIRST = (all.filter(function (c) { return c.decide; })[0] || {}).key || null;
-  pillVisibility();
-}
-
-/** Waiting on somebody else, and what was done — quiet, below the decisions. */
-function laterBlock() {
-  var html = '';
-  var mine = ((ST.changes && ST.changes.my_requests) || []).filter(function (c) { return c.status === 'PENDING' && !ST.inline['c:' + c.id]; });
-  if (mine.length) {
-    html += '<details class="more"' + (ST.open.mine ? ' open' : '') + ' data-keep="mine"><summary>Waiting on somebody else (' + mine.length + ') ›</summary>'
-      + mine.map(function (c) { return changeCard(c, true); }).join('') + '</details>';
-  }
-  var done = (ST.activity || []).slice(0, 5);
-  if (done.length) {
-    html += '<div class="label">Done lately</div><div class="card" style="padding:4px 16px">'
-      + done.map(function (a) {
-          return '<div class="rowx"><div class="main">' + esc(a.description) + '<small>' + esc(when(a.at)) + '</small></div>'
-            + '<span class="pill ' + ({ ok: 'yes', refused: 'no', error: 'no' }[a.outcome] || '') + '">'
-            + esc({ ok: 'Done', refused: 'Refused', error: 'Failed', nothing: 'Nothing there' }[a.outcome] || a.outcome) + '</span></div>';
-        }).join('') + '</div>';
-  }
-  return html;
-}
-
-// ── the cards ───────────────────────────────────────────────────────────
-var RAIL = { PENDING: 'var(--warn)', APPROVED: 'var(--qb)', EXECUTING: 'var(--qb)', EXECUTED: 'var(--in)', VERIFIED: 'var(--in)',
-             FAILED: 'var(--out)', REJECTED: 'var(--out)', CANCELLED: 'var(--label3)', DRAFT: 'var(--label3)' };
-function pillClass(st) {
-  return st === 'PENDING' ? 'wait' : (st === 'VERIFIED' || st === 'EXECUTED' || st === 'APPROVED') ? 'yes'
-       : (st === 'FAILED' || st === 'REJECTED') ? 'no' : '';
-}
-/**
- * A change to QuickBooks. A person reading it must be able to answer, without
- * opening anything, whether this is a real financial action, whether it has
- * happened yet, exactly what will happen and to whom, and who or what is
- * stopping it. So the amount is the largest thing on it, the status is a
- * stripe down the left, and a button that cannot be pressed says why rather
- * than disappearing.
- */
-function changeCard(c, mine) {
-  var rail = RAIL[c.status] || 'var(--label3)';
-  var who = c.counterparty_name ? '<div class="meta">' + (c.counterparty_kind === 'vendor' ? 'Vendor' : 'Customer') + ': ' + esc(c.counterparty_name) + '</div>' : '';
-  var by = '<div class="meta">Asked for by ' + esc(c.requested_by_name || c.requested_by) + (mine ? ' (you)' : '')
-    + (c.created_at ? ' · ' + esc(when(c.created_at)) : '') + '</div>';
-  var lines = '';
-  var p = (c.payload && c.payload.params) || {};
-  var L = p.Line || p.line_items || [];
-  if (Array.isArray(L) && L.length) {
-    // A line's money is Amount where Intuit gives one, and qty × unit_price
-    // where it gives those instead — the same rule the validator applies, so
-    // the card never shows a $0 line under a $12 total.
-    var lineAmt = function (l) {
-      if (l.Amount != null || l.amount != null) return Number(l.Amount != null ? l.Amount : l.amount);
-      var q = l.qty != null ? l.qty : (l.Qty != null ? l.Qty : l.quantity);
-      var u = l.unit_price != null ? l.unit_price : l.UnitPrice;
-      return (q != null && u != null) ? Number(q) * Number(u) : 0;
-    };
-    lines = '<div class="lines">' + L.slice(0, 8).map(function (l) {
-      var q = l.qty != null ? l.qty : (l.Qty != null ? l.Qty : l.quantity);
-      return '<div class="line"><span>' + esc(l.Description || l.description || 'Line') + (q != null && Number(q) !== 1 ? ' × ' + esc(String(q)) : '')
-        + '</span><span class="num">' + money(lineAmt(l)) + '</span></div>';
-    }).join('') + '</div>';
-  }
-  // An edit shows what is there now and what will be there after; a deletion
-  // says plainly what disappears. Neither is a creation and must not read like one.
-  var op = c.operation || 'create';
-  var opWord = op === 'update' ? 'Edit' : (op === 'delete' || op === 'void') ? 'Delete' : '';
-  var beforeBits = [];
-  if (c.before && typeof c.before === 'object') {
-    if (c.before.DocNumber) beforeBits.push('No. ' + esc(c.before.DocNumber));
-    if (c.before.TxnDate) beforeBits.push('dated ' + esc(c.before.TxnDate));
-    if (c.before.TotalAmt != null) beforeBits.push('total ' + money(c.before.TotalAmt));
-    if (c.before.Balance != null && Number(c.before.Balance) !== Number(c.before.TotalAmt)) beforeBits.push('balance ' + money(c.before.Balance));
-  }
-  var opBlock = '';
-  if (op === 'update' && Array.isArray(c.changes) && c.changes.length) {
-    opBlock = '<div class="lines"><div class="line" style="font-weight:600"><span>What changes</span><span>before → after</span></div>'
-      + c.changes.map(function (x) {
-          return '<div class="line"><span>' + esc(x.field) + '</span><span>' + esc(x.before === '' ? '—' : x.before) + ' → <b>' + esc(x.after === '' ? '—' : x.after) + '</b></span></div>';
-        }).join('') + '</div>' + (beforeBits.length ? '<div class="meta">As it is now: ' + beforeBits.join(' · ') + '</div>' : '');
-  } else if (op === 'delete' || op === 'void') {
-    opBlock = '<div class="strip bad"><b>This will ' + (c.kind === 'invoice' ? 'void' : 'delete') + ' the ' + esc(c.kind || 'record')
-      + (beforeBits.length ? ' — ' + beforeBits.join(' · ') : '') + '</b><div>Cannot be undone from Eesa. Approving needs the amount typed back.</div></div>';
-  }
-  var val = '';
-  if (c.validation && c.validation.errors && c.validation.errors.length) {
-    val = '<div class="strip bad"><b>This cannot be approved yet</b>' + c.validation.errors.map(function (e) { return '<div>• ' + esc(e) + '</div>'; }).join('') + '</div>';
-  } else if (c.validation && c.validation.warnings && c.validation.warnings.length) {
-    val = '<div class="strip warn"><b>Check before approving</b>' + c.validation.warnings.map(function (e) { return '<div>• ' + esc(e) + '</div>'; }).join('') + '</div>';
-  }
-  var req = '';
-  if (c.status === 'PENDING') {
-    req = '<div class="meta">' + c.approvals_received + ' of ' + c.required_approvals + ' approval' + (c.required_approvals === 1 ? '' : 's') + ' received'
-      + (c.high_risk ? ' · high risk: the amount must be typed back' : '')
-      + ((c.matched_policies || []).length ? ' · policy: ' + esc(c.matched_policies.map(function (m) { return m.name; }).join(', ')) : '')
-      + (c.expires_at ? ' · expires ' + esc(when(c.expires_at)) : '') + '</div>';
-  }
-  var outcome = '';
-  if (c.status === 'VERIFIED' || c.status === 'EXECUTED') {
-    var done = op === 'update' ? ' changed in QuickBooks' : (op === 'delete' || op === 'void') ? (c.kind === 'invoice' ? ' voided in QuickBooks' : ' deleted from QuickBooks') : ' created in QuickBooks';
-    outcome = '<div class="strip ok"><b>' + esc(c.kind || 'Change') + done + '</b>'
-      + (c.quickbooks_id ? '<div>QuickBooks ID ' + esc(c.quickbooks_id) + (c.quickbooks_doc_number ? ' · No. ' + esc(c.quickbooks_doc_number) : '') + '</div>' : '')
-      + '<div>' + (c.status === 'VERIFIED' ? 'Read back from QuickBooks and confirmed to match what was approved.' : 'Sent. Checking that QuickBooks holds what was approved…') + '</div></div>';
-  } else if (c.status === 'FAILED') {
-    outcome = '<div class="strip bad"><b>QuickBooks refused it</b><div>' + esc(c.status_reason || '') + '</div><div>Nothing was created.</div></div>';
-  } else if (c.status === 'REJECTED') {
-    var r = (c.decisions || []).filter(function (d) { return d.status === 'REJECTED'; })[0];
-    outcome = '<div class="strip bad"><b>Turned down</b><div>' + esc((r && r.reason) || c.status_reason || '') + '</div>' + (r ? '<div>by ' + esc(r.by) + '</div>' : '') + '</div>';
-  }
-  var actions = '';
-  if (c.status === 'FAILED' && c.can_retry) {
-    var unknown = c.last_execution && c.last_execution.status === 'INDETERMINATE';
-    actions = '<div class="actions"><span class="meta">' + (unknown
-        ? 'The last attempt’s outcome was unknown. Eesa will look in QuickBooks for the document before sending again.'
-        : 'Attempt ' + esc(String((c.last_execution && c.last_execution.attempt) || 1)) + ' failed. The approvals still stand; the same change is sent again.') + '</span>'
-      + '<button class="btn primary" data-act="retry" data-id="' + esc(c.id) + '">Try again</button></div>';
-  } else if (c.status === 'PENDING' && !mine) {
-    var blocked = (c.blockers || []).length ? c.blockers[0] : '';
-    actions = '<div class="actions">' + (blocked ? '<span class="meta">' + esc(blocked) + '</span>' : '')
-      + '<button class="btn" data-act="reject" data-id="' + esc(c.id) + '"' + (blocked ? ' disabled' : '') + '>Turn down</button>'
-      + '<button class="btn primary" data-act="approve" data-id="' + esc(c.id) + '"' + (blocked ? ' disabled' : '') + '>Approve</button></div>';
-  } else if (c.status === 'PENDING' && mine) {
-    actions = '<div class="actions"><button class="btn" data-act="cancel" data-id="' + esc(c.id) + '">Cancel request</button></div>';
-  }
-  return '<div class="change" data-change="' + esc(c.id) + '" style="border-left:5px solid ' + rail + '">'
-    + '<div class="chead"><div><span class="pill ' + pillClass(c.status) + '">' + esc(c.status_label || c.status) + '</span>'
-    + (opWord ? ' <span class="pill">' + opWord + '</span>' : '') + ' <b>' + esc(c.summary) + '</b>' + who + by + '</div>'
-    + '<div class="amt">' + money(c.amount) + '</div></div>'
-    + (op === 'create' ? lines : '') + opBlock + val + req + outcome + actions + '</div>';
-}
-
-/**
- * A request to the attendance assistant: what was said, the draft, what the
- * rules and the checker found — each with who found it — and one decision.
- */
-function requestCard(q, app) {
-  var icon = { ok: '✓', warn: '!', stop: '✕' };
-  var verdict = { ok: ['ok', 'Checked — looks right'], attention: ['warn', 'Checked — look at these first'],
-                  stop: ['bad', 'Checked — this can’t be approved as it is'] }[q.verdict || (q.blocked ? 'stop' : 'attention')];
-  var steps = q.steps.length ? '<ol class="steps">' + q.steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' : '';
-  var body = '';
-  if (q.status === 'DRAFTING') body = '<p class="say working">The attendance assistant is drafting it</p>';
-  else if (q.status === 'CHECKING') body = steps + '<p class="say working">A checker is looking it over</p>';
-  else if (q.status === 'NEEDS_INFO') body = '<p class="ask">' + esc(q.question) + '</p>'
-    + '<div class="answer"><input data-answer="' + esc(q.id) + '" placeholder="Your answer" aria-label="Your answer">'
-    + '<button class="btn primary" data-act="answer" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Answer</button></div>'
-    + '<div class="actions"><button class="btn link" data-act="discard-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Never mind</button></div>';
-  else if (q.status === 'READY') body = steps + (q.summary ? '<p class="say">' + esc(q.summary) + '</p>' : '')
-    + '<div class="found ' + verdict[0] + '"><b>' + verdict[1] + '</b>'
-    + q.findings.map(function (f) { return '<div class="f ' + esc(f.level) + '"><span>' + (icon[f.level] || '·') + '</span><span>' + esc(f.text) + ' <em>' + (f.by === 'rules' ? 'rules' : 'checker') + '</em></span></div>'; }).join('')
-    + '</div><div class="actions"><span class="meta">Each step runs as you, inside your QuickBooks role.</span>'
-    + '<button class="btn" data-act="discard-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '">Discard</button>'
-    + '<button class="btn primary" data-act="approve-req" data-id="' + esc(q.id) + '" data-app="' + esc(app) + '"' + (q.blocked ? ' disabled' : '') + '>Approve</button></div>';
-  else if (q.status === 'APPLYING') body = steps + '<p class="say working">Applying</p>';
-  else if (q.status === 'DONE' || q.status === 'FAILED') body = '<ol class="steps">' + (q.results.length ? q.results : q.steps.map(function (t) { return { ok: false, text: t }; }))
-    .map(function (x) { return '<li class="' + (x.ok ? 'ok' : 'bad') + '">' + (x.ok ? '✓ ' : '✕ ') + esc(x.text) + '</li>'; }).join('') + '</ol>'
-    + (q.error ? '<p class="say bad">' + esc(q.error) + '</p>' : '');
-  else if (q.status === 'DISCARDED') body = '<p class="say">Discarded.</p>';
-  var kicker = { DRAFTING: 'Drafting', CHECKING: 'Checking', READY: 'Ready for you', NEEDS_INFO: 'A question for you', APPLYING: 'Applying',
-                 DONE: 'Done', FAILED: 'Did not go through', DISCARDED: 'Discarded' }[q.status] || q.status_label;
-  return '<div class="card" data-req="' + esc(q.id) + '"><div class="kicker">Attendance · ' + esc(kicker) + '</div>'
-    + '<h3>“' + esc(q.words) + '”</h3>' + body + '</div>';
 }
 
 /** Hours or wages a task brought in, ready for their owner to send. */
@@ -958,243 +1347,6 @@ function connectCard(a) {
     + ' — never ' + a.not_shared.map(function (s) { return esc(s.toLowerCase()); }).join(', ') + '. Nothing is posted until somebody approves it.</p>'
     + '<div class="actions"><button class="btn primary" data-act="connect" data-app="' + esc(a.key) + '">Connect ' + esc(a.name) + '</button></div></div>';
 }
-
-// ── keeping it live ─────────────────────────────────────────────────────
-// A draft takes the assistant and the checker 20–60 seconds; the card says
-// what is happening and changes on its own when it is ready.
-var watchTimer = null;
-function busy() {
-  return connected().some(function (a) {
-    return (((ST.requests[a.key] || {}).open) || []).some(function (q) { return ['DRAFTING', 'CHECKING', 'APPLYING'].indexOf(q.status) !== -1; });
-  });
-}
-function watch() {
-  clearTimeout(watchTimer);
-  if (!busy()) return;
-  watchTimer = setTimeout(async function () {
-    await Promise.all(connected().map(function (a) { return loadRequests(a.key); }));
-    paintNow(); paintInline(); watch();
-  }, 2500);
-}
-/** A card shown under an answer is the same card: redraw it where it sits. */
-function paintInline() {
-  document.querySelectorAll('#thread [data-inline-req]').forEach(function (el) {
-    var id = el.getAttribute('data-inline-req'), app = el.getAttribute('data-app');
-    var all = ((ST.requests[app] || {}).open || []).concat((ST.requests[app] || {}).recent || []);
-    var q = all.filter(function (x) { return x.id === id; })[0];
-    if (q) el.innerHTML = requestCard(q, app);
-  });
-}
-
-// ── what was asked, and what was answered ───────────────────────────────
-var asking = false;
-function turn(where, html, cls) {
-  var d = document.createElement('div');
-  d.className = 'turn' + (cls ? ' ' + cls : '');
-  d.innerHTML = '<div class="bubble">' + html + '</div>';
-  $(where).appendChild(d);
-  return d;
-}
-function settle(bubble, t) {
-  if (t.status === 'DONE') bubble.innerHTML = md(t.answer);
-  // Never a silent failure: the question stays on screen with the reason.
-  else if (t.status === 'FAILED') bubble.innerHTML = '<p class="bad" style="color:var(--out)">' + esc(t.error || 'No answer came back.') + '</p>';
-}
-/**
- * Ask, then poll. Never wait on the answer over one connection: the edge gives
- * up on any response slower than 30 seconds and answers with a 500 of its own,
- * and an agent turn takes 12–60s. The question is stored, a worker answers it,
- * and this polls the row every two seconds — three minutes at most, then it
- * says so rather than spinning.
- */
-async function ask(question) {
-  question = String(question || '').trim();
-  if (asking || !question) return;
-  asking = true; stopListening();
-  $('#send').disabled = true;
-  $('#box').value = ''; autosize();
-  turn('#thread', '<p>' + esc(question) + '</p>', 'me');
-  var pending = turn('#thread', '<p class="thinking working">Working on it</p>');
-  pending.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  var bubble = pending.querySelector('.bubble');
-  var since = Date.now(), known = knownIds();
-  try {
-    // `specialist` is not sent: Eesa pins it to this plugin, so a page scoped
-    // to the books cannot ask another plugin's agent.
-    var sent = await platform('specialist_chat_send', { question: question });
-    if (!sent.ok) throw new Error(sent.error || 'Could not send that.');
-    var id = sent.turn.id, t = sent.turn;
-    since = Date.parse(sent.turn.created_at || '') || since;
-    for (var i = 0; i < 90 && t.status !== 'DONE' && t.status !== 'FAILED'; i++) {
-      await pause(2000);
-      if (i === 15) bubble.innerHTML = '<p class="thinking working">Still working — a long report takes a while</p>';
-      var st = await platform('specialist_chat_status', { turn_id: id });
-      if (st.ok) t = st.turn;
-    }
-    if (t.status !== 'DONE' && t.status !== 'FAILED') {
-      t = { status: 'FAILED', error: 'This is taking longer than three minutes. It is still being worked on — it will be here when you come back.' };
-    }
-    settle(bubble, t);
-    if (t.status === 'DONE') await showWhatItMade(since, known);
-  } catch (e) {
-    bubble.innerHTML = '<p style="color:var(--out)">' + esc(e.message) + '</p>';
-  } finally {
-    asking = false;
-    $('#send').disabled = false;
-    pending.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-}
-/**
- * An answer that made something — a change for approval, a draft for the
- * assistant — shows it right under the answer, live, so the person sees what
- * was recorded, that it is waiting, and for whom.
- */
-function knownIds() {
-  var ids = {};
-  var q = ST.changes || {};
-  (q.waiting_on_me || []).concat(q.my_requests || [], q.failed || []).forEach(function (c) { ids['c:' + c.id] = true; });
-  Object.keys(ST.requests).forEach(function (app) {
-    ((ST.requests[app] || {}).open || []).concat((ST.requests[app] || {}).recent || []).forEach(function (r) { ids['r:' + r.id] = true; });
-  });
-  return ids;
-}
-async function showWhatItMade(since, known) {
-  await loadNeeds();
-  // New since the question was asked — not merely recent: a draft somebody
-  // started a moment before is not what this answer made.
-  var freshC = function (c) { return !known['c:' + c.id] && Date.parse(c.created_at || '') >= since - 5000; };
-  var freshR = function (q) { return !known['r:' + q.id] && Date.parse(q.created_at || '') >= since - 5000; };
-  var me = (ACCESS && ACCESS.email) || '';
-  ((ST.changes && ST.changes.my_requests) || []).filter(freshC).forEach(function (c) {
-    ST.inline['c:' + c.id] = true;
-    var d = document.createElement('div'); d.className = 'turn inline-card'; d.innerHTML = changeCard(c, true);
-    $('#thread').appendChild(d);
-  });
-  connected().forEach(function (a) {
-    (((ST.requests[a.key] || {}).open) || []).filter(function (q) { return freshR(q) && (!me || q.asked_by === me); }).forEach(function (q) {
-      ST.inline['r:' + q.id] = true;
-      var d = document.createElement('div'); d.className = 'turn inline-card';
-      d.setAttribute('data-inline-req', q.id); d.setAttribute('data-app', a.key);
-      d.innerHTML = requestCard(q, a.key);
-      $('#thread').appendChild(d);
-    });
-  });
-  paintNow(); watch();
-}
-/** Earlier questions, so the page is a record rather than a scratchpad. */
-async function loadHistory() {
-  try {
-    var h = await platform('specialist_chat_history', { limit: 12 });
-    var box = $('#earlier');
-    box.innerHTML = '';
-    (h.turns || []).forEach(function (t) {
-      turn('#earlier', '<p>' + esc(t.question) + '</p>', 'me');
-      var b = turn('#earlier', '<p class="thinking working">Working on it</p>').querySelector('.bubble');
-      settle(b, t);
-      // A turn still in flight when the page opened: keep polling it.
-      if (t.status === 'QUEUED' || t.status === 'RUNNING') resume(t.id, b);
-    });
-  } catch (e) { /* history is a convenience; asking still works */ }
-}
-async function resume(id, bubble) {
-  var t = { status: 'RUNNING' };
-  for (var i = 0; i < 90 && t.status !== 'DONE' && t.status !== 'FAILED'; i++) {
-    await pause(2000);
-    var st = await platform('specialist_chat_status', { turn_id: id });
-    if (st.ok) t = st.turn;
-  }
-  settle(bubble, t);
-}
-
-// ── the composer: type or speak ─────────────────────────────────────────
-function autosize() {
-  var b = $('#box'); b.style.height = 'auto'; b.style.height = Math.min(b.scrollHeight, 160) + 'px';
-}
-$('#box').addEventListener('input', autosize);
-$('#box').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask($('#box').value); }
-});
-$('#composer').addEventListener('submit', function (e) { e.preventDefault(); ask($('#box').value); });
-
-/**
- * Speaking is typing by voice: the words land in the box, where they can be
- * read and fixed before they are sent. The browser does the listening; where it
- * cannot — or Eesa has not been allowed the microphone — the button says so
- * once and goes away, rather than failing every time it is pressed.
- */
-var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
-function hint(text) { var h = $('#hint'); h.textContent = text || ''; h.hidden = !text; }
-function stopListening() { if (rec) { try { rec.stop(); } catch (e) {} } }
-if (SR) {
-  $('#mic').hidden = false;
-  $('#mic').addEventListener('click', function () {
-    if (rec) { stopListening(); return; }
-    var base = $('#box').value.trim();
-    rec = new SR();
-    rec.lang = navigator.language || 'en-US';
-    rec.interimResults = true; rec.continuous = true;
-    rec.onresult = function (e) {
-      var said = '';
-      for (var i = 0; i < e.results.length; i++) said += e.results[i][0].transcript;
-      $('#box').value = (base ? base + ' ' : '') + said.trim(); autosize();
-    };
-    rec.onerror = function (e) {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
-        hint('The microphone isn’t available here — allow it for Eesa in your browser, or type instead.');
-        $('#mic').hidden = true;
-      } else if (e.error !== 'aborted' && e.error !== 'no-speech') hint('Didn’t catch that — try again, or type it.');
-    };
-    rec.onend = function () { rec = null; $('#mic').classList.remove('on'); $('#mic').setAttribute('aria-label', 'Speak'); };
-    try { rec.start(); hint(''); $('#mic').classList.add('on'); $('#mic').setAttribute('aria-label', 'Stop listening'); }
-    catch (e) { rec = null; hint('The microphone isn’t available here — type instead.'); }
-  });
-}
-
-/** Suggestions follow the role, so nobody is invited to ask what they can't. */
-function paintChips() {
-  var v = viewer(), conn = connected().length;
-  var chips = [];
-  if (may('reports_financial')) chips.push(['ask', 'How did last month go?']);
-  if (may('reports_ar')) chips.push(['ask', 'Who owes us the most?']);
-  if (may('reports_ap')) chips.push(['ask', 'What bills are due soon?']);
-  if (conn && v.sets_pay) chips.push(['fill', 'Set pay for ']);
-  if (conn && v.adds_employees) chips.push(['fill', 'Add to QuickBooks: ']);
-  if (may('sales')) chips.push(['fill', 'Draft an invoice for ']);
-  $('#chips').innerHTML = chips.map(function (c) {
-    return '<button type="button" data-chip="' + c[0] + '">' + esc(c[1].trim().replace(/:$/, '')) + (c[0] === 'fill' ? '…' : '') + '</button>';
-  }).join('');
-  $('#chips').querySelectorAll('button').forEach(function (b, i) {
-    b.addEventListener('click', function () {
-      if (chips[i][0] === 'ask') return ask(chips[i][1]);
-      $('#box').value = chips[i][1]; autosize(); $('#box').focus();
-    });
-  });
-}
-
-// "N things need you ↑" whenever the first of them is out of sight — wherever
-// it is: at the top, or under the answer that made it.
-var NEEDS = 0, FIRST = null, pillFrame = false;
-function firstDecision() {
-  if (!FIRST) return null;
-  var id = FIRST.slice(2);
-  return document.querySelector('[data-key="' + FIRST + '"]')
-    || (FIRST.indexOf('r:') === 0 && document.querySelector('[data-req="' + id + '"]'))
-    || (FIRST.indexOf('c:') === 0 && document.querySelector('[data-change="' + id + '"]')) || null;
-}
-function pillVisibility() {
-  var el = NEEDS ? firstDecision() : null, pill = $('#needsPill');
-  if (!el) { pill.hidden = true; return; }
-  var r = el.getBoundingClientRect(), above = r.bottom < 70, below = r.top > $('.dock').getBoundingClientRect().top;
-  pill.textContent = count(NEEDS, 'thing needs', 'things need') + ' you ' + (above ? '↑' : '↓');
-  pill.hidden = !(above || below);
-}
-function toNeeds() { var el = firstDecision(); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-window.addEventListener('scroll', function () {
-  if (pillFrame) return;
-  pillFrame = true;
-  requestAnimationFrame(function () { pillFrame = false; pillVisibility(); });
-}, { passive: true });
-$('#needsPill').addEventListener('click', toNeeds);
 
 // ── decisions ───────────────────────────────────────────────────────────
 function normalizeAmount(t) {
@@ -1300,145 +1452,40 @@ function retryDialog(c) {
     submit: function () { return decide({ change_id: c.id, decision: 'retry' }); },
   });
 }
-/** After the final approval the worker sends it; say how it went. */
-async function pollChange(id) {
-  for (var i = 0; i < 30; i++) {
-    await pause(2000);
-    var st = await platform('quickbooks_change_status', { change_id: id }).catch(function () { return { ok: false }; });
-    if (!st.ok) return;
-    var c = st.change, s = c.status;
-    redrawChange(c);
-    if (s === 'APPROVED' || s === 'EXECUTING' || (s === 'FAILED' && i < 2)) continue;
-    if (s === 'VERIFIED' || s === 'EXECUTED') toast(c.summary + ' — in QuickBooks' + (s === 'VERIFIED' ? ', checked' : ''));
-    else if (s === 'FAILED') toast('QuickBooks refused ' + c.summary + (c.status_reason ? ': ' + c.status_reason : ''));
-    await loadNeeds();
-    return;
-  }
-}
-function redrawChange(c) {
-  document.querySelectorAll('[data-change="' + c.id + '"]').forEach(function (el) {
-    var mine = el.closest('.inline-card') !== null;
-    el.outerHTML = changeCard(c, mine);
+
+/**
+ * Speaking is typing by voice: the words land in the box, where they can be
+ * read and fixed before they are sent. The browser does the listening; where it
+ * cannot — or Eesa has not been allowed the microphone — the button says so
+ * once and goes away, rather than failing every time it is pressed.
+ */
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null;
+function hint(text) { var h = $('#hint'); h.textContent = text || ''; h.hidden = !text; }
+function stopListening() { if (rec) { try { rec.stop(); } catch (e) {} } }
+if (SR) {
+  $('#mic').hidden = false;
+  $('#mic').addEventListener('click', function () {
+    if (rec) { stopListening(); return; }
+    var base = $('#box').value.trim();
+    rec = new SR();
+    rec.lang = navigator.language || 'en-US';
+    rec.interimResults = true; rec.continuous = true;
+    rec.onresult = function (e) {
+      var said = '';
+      for (var i = 0; i < e.results.length; i++) said += e.results[i][0].transcript;
+      $('#box').value = (base ? base + ' ' : '') + said.trim(); autosize();
+    };
+    rec.onerror = function (e) {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+        hint('The microphone isn’t available here — allow it for Eesa in your browser, or type instead.');
+        $('#mic').hidden = true;
+      } else if (e.error !== 'aborted' && e.error !== 'no-speech') hint('Didn’t catch that — try again, or type it.');
+    };
+    rec.onend = function () { rec = null; $('#mic').classList.remove('on'); $('#mic').setAttribute('aria-label', 'Speak'); };
+    try { rec.start(); hint(''); $('#mic').classList.add('on'); $('#mic').setAttribute('aria-label', 'Stop listening'); }
+    catch (e) { rec = null; hint('The microphone isn’t available here — type instead.'); }
   });
 }
-function findChange(id) {
-  var q = ST.changes || {};
-  return (q.waiting_on_me || []).concat(q.my_requests || [], q.failed || []).filter(function (x) { return x.id === id; })[0];
-}
-function findRequest(app, id) {
-  var r = ST.requests[app] || {};
-  return (r.open || []).concat(r.recent || []).filter(function (x) { return x.id === id; })[0];
-}
-
-document.addEventListener('toggle', function (e) {
-  var d = e.target;
-  if (d.matches && d.matches('details[data-keep]')) ST.open[d.getAttribute('data-keep')] = d.open;
-}, true);
-
-document.addEventListener('click', async function (e) {
-  var b = e.target.closest('button[data-act]');
-  if (!b || b.disabled) return;
-  var act = b.dataset.act, id = b.dataset.id, app = b.dataset.app;
-  try {
-    if (act === 'approve' || act === 'reject' || act === 'cancel' || act === 'retry') {
-      var c = findChange(id);
-      if (!c) return;
-      var done = await { approve: approveDialog, reject: rejectDialog, cancel: cancelDialog, retry: retryDialog }[act](c);
-      if (!done) return;
-      toast({ approve: 'Approved — sending it to QuickBooks', reject: 'Turned down — they have been told why',
-              cancel: 'Cancelled — nothing was sent', retry: 'Sending it again' }[act]);
-      await loadNeeds();
-      if (act === 'approve' || act === 'retry') pollChange(id);
-      return;
-    }
-    if (act === 'approve-req') {
-      // The card is the confirmation: it shows every step and what was checked.
-      b.disabled = true; b.textContent = 'Applying…';
-      var r = await call('qb_requests', { app: app, action: 'approve', id: id });
-      toast(r.request.status === 'DONE' ? 'Done — each step is on the card' : 'Stopped — the card says where');
-      ST.inline['r:' + id] = ST.inline['r:' + id] || false;
-      await loadRequests(app); paintNow(); paintInline();
-      setTimeout(loadNeeds, 6000);
-      return;
-    }
-    if (act === 'discard-req') {
-      await call('qb_requests', { app: app, action: 'discard', id: id });
-      await loadRequests(app); paintNow(); paintInline();
-      return;
-    }
-    if (act === 'answer') {
-      var q = findRequest(app, id);
-      var input = document.querySelector('[data-answer="' + id + '"]');
-      var ans = input ? input.value.trim() : '';
-      if (!ans || !q) { if (input) input.focus(); return; }
-      b.disabled = true;
-      // The answer and the question go back together, as one request — and
-      // its card takes the place of the one that asked.
-      var again = await call('qb_requests', { app: app, action: 'ask', words: q.words + '\n' + ans });
-      await call('qb_requests', { app: app, action: 'discard', id: id }).catch(function () {});
-      var spot = document.querySelector('#thread [data-inline-req="' + id + '"]');
-      if (spot && again.request) { spot.setAttribute('data-inline-req', again.request.id); ST.inline['r:' + again.request.id] = true; }
-      await loadRequests(app); paintNow(); paintInline(); watch();
-      return;
-    }
-    if (act === 'sort-people') {
-      b.disabled = true; b.textContent = 'Asking…';
-      await call('qb_requests', { app: app, action: 'ask', words:
-        'Match everybody who is not matched to QuickBooks yet to their QuickBooks employee, or add them to QuickBooks if they '
-        + 'are not there. Where you are not sure who somebody is, ask me.' });
-      await loadRequests(app); paintNow(); watch();
-      return;
-    }
-    if (act === 'post') {
-      var me = (ACCESS && ACCESS.email) || '';
-      var ids = (((ST.review[app] || {}).items) || []).filter(function (i) { return i.status === 'REVIEW' && i.task && i.task.owner === me; }).map(function (i) { return i.id; });
-      if (!ids.length) return;
-      b.disabled = true; b.textContent = 'Posting…';
-      var out = await call('qb_review', { app: app, action: 'post', ids: ids });
-      toast(plural(out.posted.length, 'entry', 'entries') + ' sent to QuickBooks' + (out.refused.length ? ' · ' + out.refused.length + ' refused: ' + out.refused[0].error : ''));
-      await loadNeeds();
-      setTimeout(loadNeeds, 6000);
-      return;
-    }
-    if (act === 'skip-item') {
-      var ok = await dialog({ title: 'Don’t post this?', ok: 'Don’t post',
-        sub: 'It stays out of QuickBooks, and no task brings it back.',
-        body: '<label for="skipWhy">Why, so the team knows</label><textarea id="skipWhy" rows="2" maxlength="300" placeholder="e.g. Training day, not paid"></textarea>',
-        validate: function (v) { return v.querySelector('#skipWhy').value.trim().length >= 3 ? null : 'why'; },
-        collect: function (v) { return { why: v.querySelector('#skipWhy').value.trim() }; },
-        submit: function (v) { return call('qb_review', { app: app, action: 'exclude', ids: [id], reason: v.why }); } });
-      if (ok) { await loadNeeds(); }
-      return;
-    }
-    if (act === 'bring-back') {
-      await call('qb_review', { app: app, action: 'bring_back', ids: [id] });
-      toast('Brought back — it is checked again on the next run');
-      await loadNeeds();
-      return;
-    }
-    if (act === 'draft') {
-      await call('qb_pay_save', { what: b.dataset.what, action: b.dataset.do, id: id });
-      toast(b.dataset.do === 'confirm' ? 'Confirmed' : 'Discarded');
-      await loadNeeds();
-      return;
-    }
-    if (act === 'connect') {
-      b.disabled = true; b.textContent = 'Connecting…';
-      await call('qb_app_connect', { app: app, action: 'connect' });
-      toast('Connected — read only');
-      await loadNeeds(); paintChips();
-      return;
-    }
-    if (act === 'toggle') { ST.open[b.dataset.key] = !ST.open[b.dataset.key]; paintNow(); return; }
-    if (act === 'to-needs') { toNeeds(); return; }
-  } catch (err) {
-    // The expected outcomes of a race, said as what they are.
-    if (err.code === 'already_executed') toast('Somebody else approved this first. It has already been sent.');
-    else if (err.code === 'changed_since') toast('This changed in QuickBooks since it was proposed. Ask for it again.');
-    else toast(err.message);
-    await loadNeeds().catch(function () {});
-  }
-});
 
 // ── who you are, when you ask ───────────────────────────────────────────
 function whenChecked(days) {
@@ -1451,11 +1498,12 @@ function whenChecked(days) {
 }
 function paintWho(a) {
   var name = a.name || a.email || 'You';
-  $('#who').textContent = (name.trim()[0] || '·').toUpperCase();
-  $('#who').hidden = false;
-  $('#role').textContent = a.has_access ? (a.role_label || 'QuickBooks') + (a.is_approver ? ' · you approve changes' : '') : 'No QuickBooks role recorded';
+  $('#whoA').textContent = (name.trim()[0] || '·').toUpperCase();
+  $('#whoName').textContent = name;
+  $('#role').textContent = a.has_access ? (a.role_label || 'QuickBooks') + (a.is_approver ? ' · you approve changes' : '')
+                                        : 'No QuickBooks role recorded';
 }
-$('#who').addEventListener('click', function () {
+function openAccess() {
   var a = ACCESS || {};
   var labels = a.area_labels || {}, viewOnly = a.view_only_areas || [];
   var names = (a.approvers || []).map(function (p) { return esc(p.name || p.email); });
@@ -1476,27 +1524,8 @@ $('#who').addEventListener('click', function () {
     + '<div class="actions"><button class="btn" data-close>Done</button></div></div>';
   s.addEventListener('click', function (e) { if (e.target === s || e.target.hasAttribute('data-close')) s.remove(); });
   document.body.appendChild(s);
-});
-
-// ── first paint ─────────────────────────────────────────────────────────
-// The role comes FIRST and everything else waits on it: what the brief reads,
-// which suggestions appear, which cards can exist.
-async function boot() {
-  try {
-    ACCESS = await platform('quickbooks_my_access', {});
-    paintWho(ACCESS);
-  } catch (e) {
-    ACCESS = { areas: [], has_access: false, note: e.message };
-    $('#role').textContent = 'Could not check your access';
-  }
-  loadHistory();
-  loadBrief();
-  await loadNeeds();
-  paintChips();
-  $('#now').scrollIntoView({ block: 'start' });
-  // Keep what needs you current while the page stays open.
-  setInterval(function () { if (!asking && document.visibilityState === 'visible') loadNeeds(); }, 60000);
 }
+
 </script>
 </body>
 </html>
