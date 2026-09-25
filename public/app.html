@@ -416,6 +416,15 @@
   .dlg .btn.link { border: 0; background: transparent; color: var(--qb); font-weight: 600; padding: 4px 2px; }
   .ap-acts select.pick { max-width: 210px; }
   .ap-rule-read { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--qb-soft); font-size: 14px; font-weight: 600; }
+  .ap-req { border-top: 1px solid var(--sep); margin-top: 12px; padding-top: 12px; display: grid; gap: 6px; }
+  .ap-req-h { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+  .ap-req-q { font-weight: 600; font-size: 15px; }
+  .ap-steplist { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14.5px; }
+  .ap-steplist li.ok { color: var(--in); list-style: none; margin-left: -18px; } .ap-steplist li.bad { color: var(--out); list-style: none; margin-left: -18px; }
+  .ap-find { display: flex; gap: 8px; margin-top: 4px; color: var(--label); }
+  .ap-find > span:first-child { width: 14px; flex: none; font-weight: 700; }
+  .ap-find.ok > span:first-child { color: var(--in); } .ap-find.warn > span:first-child { color: var(--warn); } .ap-find.stop > span:first-child { color: var(--out); }
+  .ap-find em { font-style: normal; font-size: 12px; color: var(--label3); margin-left: 4px; }
   .ap-toast { position: fixed; left: 50%; bottom: calc(22px + var(--safe)); transform: translateX(-50%); background: var(--label); color: var(--bg);
               padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 600; z-index: 60;
               box-shadow: 0 8px 30px rgba(0,0,0,.2); max-width: calc(100% - 32px); text-align: center; }
@@ -1468,7 +1477,7 @@ async function boot() {
   const AP = {
     screen: 'home', app: 'attendance', sub: 'review', filter: 'all',
     over: null, people: null, setup: null, period: null, review: null, posted: null, excluded: null,
-    accounts: null, busy: false, err: '', open: {}, assist: null, periodPick: { schedule: '', start: '' },
+    accounts: null, busy: false, err: '', open: {}, requests: null, periodPick: { schedule: '', start: '' },
   };
   const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -1488,6 +1497,7 @@ async function boot() {
       people: async () => { AP.people = await call('qb_people', { app: AP.app }); },
       setup: async () => { AP.setup = await call('qb_pay_setup'); },
       review: async () => { AP.review = await call('qb_review', { app: AP.app, status: 'open' }); },
+      requests: async () => { AP.requests = await call('qb_requests', { app: AP.app, action: 'list' }); },
       posted: async () => {
         const [p, x] = await Promise.all([call('qb_review', { app: AP.app, status: 'posted' }),
                                           call('qb_review', { app: AP.app, status: 'excluded' })]);
@@ -1584,6 +1594,7 @@ async function boot() {
       <div class="ap-apphead"><div class="ap-mark big att">${esc(a.name[0])}</div><div><h2>${esc(a.name)}</h2>
         <div class="meta">${esc(a.what)} · connected by ${esc(a.connected_by)}</div></div></div>
       ${checklist(a)}
+      ${assistantCard()}
       <div class="seg small" role="tablist" aria-label="${esc(a.name)}">${subs.map(([k, l, n, cls]) =>
         `<button data-sub="${k}" aria-selected="${AP.sub === k}">${l}${n ? `<span class="badge ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
       ${body}`;
@@ -1604,7 +1615,7 @@ async function boot() {
                    note: `${paid} of ${counted.length} have pay${a.counts.drafts ? ` · ${plural(a.counts.drafts, 'draft')} to confirm` : ''}` });
     }
     steps.push({ done: a.tasks.length > 0, go: 'tasks', label: 'Choose what goes to QuickBooks',
-                 note: a.tasks.length ? a.tasks.map((t) => t.name).join(' · ') : 'Hours as time activities; wages as a journal entry' });
+                 note: a.tasks.length ? [...new Set(a.tasks.map((t) => t.name))].join(' · ') : 'Hours as time activities; wages as a journal entry' });
     if (steps.every((s) => s.done)) return '';
     return `<div class="ap-check"><div class="ap-check-h">Set up ${esc(a.name)}</div>${steps.map((s, i) => `
       <button class="ap-check-row" data-sub="${s.go}"><span class="ap-check-n ${s.done ? 'done' : ''}">${s.done ? '✓' : i + 1}</span>
@@ -1690,8 +1701,7 @@ async function boot() {
         ${v.sets_pay ? `<span class="ap-acts"><button class="btn primary sm" data-act="confirm-draft" data-what="terms" data-id="${r.draft_pay.id}">Confirm</button><button class="btn link" data-act="discard-draft" data-what="terms" data-id="${r.draft_pay.id}">Discard</button></span>` : ''}</div>`
       : `<div class="ap-mrow"><span class="${r.pay ? 'pill' : 'pill wait'}">${r.pay ? esc(r.pay.words) : 'No pay set'}</span>
         ${v.sets_pay && !(r.match && r.match.status === 'LEFT_OUT') ? `<span class="ap-acts"><button class="btn link" data-act="pay" data-ref="${esc(r.ref)}">${r.pay ? 'Change pay' : 'Set pay'}</button></span>` : ''}</div>`;
-    return `${assistBox('people')}
-      ${p.employees_error ? `<div class="strip warn" style="margin-bottom:12px"><b>QuickBooks’ employee list is outside your role</b>${esc(p.employees_error)}</div>` : ''}
+    return `      ${p.employees_error ? `<div class="strip warn" style="margin-bottom:12px"><b>QuickBooks’ employee list is outside your role</b>${esc(p.employees_error)}</div>` : ''}
       ${!v.matches ? '<div class="strip info" style="margin-bottom:12px">Your QuickBooks role doesn’t change employees, so you can see who is who but not change it.</div>' : ''}
       <div class="ap-chips">${chips}</div>
       <div class="group">${shown.map((r) => `<div class="ap-person"><div class="ap-pname"><b>${esc(r.name)}</b><span class="meta">${esc(r.email || 'no email')}${r.on_roster === false ? ' · no longer on the roster' : ''}</span></div>
@@ -1713,8 +1723,7 @@ async function boot() {
       <div class="meta">${esc(x.words)} · ${plural(x.in_use, 'person', 'people')}</div></div>${draftBtns('rule', x)}
       ${v.sets_pay && x.status === 'CONFIRMED' ? `<button class="btn link" data-act="edit-rule" data-id="${x.id}">Edit</button>` : ''}</div>`).join('');
     const people = (p.people || []).filter((r) => !(r.match && r.match.status === 'LEFT_OUT'));
-    return `${assistBox('pay')}
-      <div class="glabel" style="margin-top:0">Pay periods</div>
+    return `      <div class="glabel" style="margin-top:0">Pay periods</div>
       <div class="group">${periods || '<div class="msg">No pay periods yet. Add how often your team is paid — every week, every two weeks, twice a month or every month.</div>'}</div>
       ${v.sets_pay ? '<div class="ap-addrow"><button class="btn sm" data-act="edit-schedule">+ Add a pay period</button></div>' : ''}
       <div class="glabel">Overtime rules</div>
@@ -1803,34 +1812,73 @@ async function boot() {
       ${v.can_connect ? `<div style="margin-top:18px"><button class="btn quiet" data-act="disconnect">Disconnect ${esc(a.name)}</button></div>` : ''}`;
   }
 
-  // ── The assistant: plain words in, drafts out, a person confirms ────────
-  function assistBox(where) {
-    const s = AP.assist && AP.assist.where === where ? AP.assist : null;
-    const eg = where === 'pay' ? 'e.g. “Jeeva is $22.50 an hour, overtime after 8 hours a day at 1.5×, paid every two weeks from 1 September”'
-                               : 'e.g. “Match everyone you can, and tell me who isn’t in QuickBooks”';
-    return `<div class="ap-assist"><label for="apAsk">Tell the assistant what to set up — it drafts, you confirm</label>
-      <div class="ap-assist-row"><input id="apAsk" class="pick" placeholder="${esc(eg)}" ${s && s.busy ? 'disabled' : ''} value="${esc(s ? s.q : '')}">
-        <button class="btn primary sm" data-act="assist" data-where="${where}" ${s && s.busy ? 'disabled' : ''}>${s && s.busy ? 'Working…' : 'Ask'}</button></div>
-      ${s && s.answer ? `<div class="ap-assist-out">${s.answer}</div>` : ''}</div>`;
+  // ── The attendance assistant: words in, a checked draft, you approve ────
+  // Two agents work on what is typed here (apps/access/quickbooks_requests.py):
+  // the assistant drafts, the checker looks it over; neither changes anything.
+  // What they found is shown with who found it, and a person approves.
+  function assistantCard() {
+    const r = AP.requests;
+    const open = r && !r.failed ? r.open : [];
+    const recent = r && !r.failed ? r.recent : [];
+    return `<div class="ap-assist"><label for="apAsk">Tell the attendance assistant what to set up</label>
+      <div class="ap-assist-row"><input id="apAsk" class="pick" placeholder="e.g. “Add Jeeva to QuickBooks, $18 an hour, every two weeks from 1 September”">
+        <button class="btn primary sm" data-act="ask">Ask</button></div>
+      <div class="ap-eg" style="margin-top:6px">It drafts, a checker reviews the draft, and nothing changes until you approve.</div>
+      ${r && r.failed ? `<div class="strip warn" style="margin-top:10px">${esc(r.failed)}</div>` : ''}
+      ${open.map(requestCard).join('')}
+      ${recent.length ? `<details class="ap-how" style="box-shadow:none;background:transparent;margin-top:6px" data-keep="recent-req" ${AP.open['recent-req'] ? 'open' : ''}>
+        <summary style="padding:10px 2px">Recent requests (${recent.length}) <span class="ap-chev">›</span></summary>${recent.map(requestCard).join('')}</details>` : ''}</div>`;
   }
-  async function assist(where) {
-    const box = $a('#apAsk'); const q = (box && box.value || '').trim();
-    if (!q) return;
-    AP.assist = { where, q, busy: true, answer: '<p class="skel">Reading Attendance and QuickBooks…</p>' };
-    render();
-    try {
-      const sent = await call('specialist_chat_send', { question: `[Apps → ${spec().name} → ${where === 'pay' ? 'Pay' : 'People'}] ${q}` });
-      let t = sent.turn;
-      for (let i = 0; i < 90 && t.status !== 'DONE' && t.status !== 'FAILED'; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const st = await platform('specialist_chat_status', { turn_id: sent.turn.id });
-        if (st.ok) t = st.turn;
-      }
-      AP.assist = { where, q: '', busy: false, answer: t.status === 'DONE' ? md(t.answer) : `<p style="color:var(--out)">${esc(t.error || 'No answer came back.')}</p>` };
-    } catch (e) {
-      AP.assist = { where, q, busy: false, answer: `<p style="color:var(--out)">${esc(e.message)}</p>` };
-    }
-    await refresh('over', 'people', 'setup');
+  function requestCard(q) {
+    const pill = { DRAFTING: 'wait', CHECKING: 'wait', READY: 'qb', NEEDS_INFO: 'wait', APPLYING: 'wait', DONE: 'yes', FAILED: 'no', DISCARDED: '' }[q.status] || '';
+    const icon = { ok: '✓', warn: '!', stop: '✕' };
+    const verdict = { ok: ['ok', 'Checked — looks right'], attention: ['warn', 'Checked — look at these before approving'],
+                      stop: ['bad', 'Checked — this can’t be approved as it is'] }[q.verdict || (q.blocked ? 'stop' : 'attention')];
+    let body = '';
+    if (q.status === 'DRAFTING') body = '<div class="ap-eg skel">The assistant is drafting…</div>';
+    else if (q.status === 'CHECKING') body = `${steps(q)}<div class="ap-eg skel">The checker is looking it over…</div>`;
+    else if (q.status === 'NEEDS_INFO') body = `<div class="strip warn"><b>The assistant asks</b>${esc(q.question)}</div>
+      <div class="ap-assist-row" style="margin-top:8px"><input class="pick" data-answer="${q.id}" placeholder="Your answer"><button class="btn primary sm" data-act="answer" data-id="${q.id}">Answer</button>
+      <button class="btn link" data-act="discard-req" data-id="${q.id}">Discard</button></div>`;
+    else if (q.status === 'READY') body = `${steps(q)}${q.summary ? `<div class="ap-eg">${esc(q.summary)}</div>` : ''}
+      <div class="strip ${verdict[0]}" style="margin-top:10px"><b>${verdict[1]}</b>
+        ${q.findings.map((f) => `<div class="ap-find ${f.level}"><span>${icon[f.level] || '·'}</span><span>${esc(f.text)} <em>${f.by === 'rules' ? 'rules' : 'checker'}</em></span></div>`).join('')}</div>
+      <div class="actions"><span class="meta">Approving applies each step as you, inside your QuickBooks role.</span>
+        <button class="btn" data-act="discard-req" data-id="${q.id}">Discard</button>
+        <button class="btn primary" data-act="approve-req" data-id="${q.id}" ${q.blocked ? 'disabled' : ''}>Approve and apply</button></div>`;
+    else if (q.status === 'APPLYING') body = `${steps(q)}<div class="ap-eg skel">Applying…</div>`;
+    else if (q.status === 'DONE' || q.status === 'FAILED') body = `<ol class="ap-steplist">${(q.results.length ? q.results : q.steps.map((t) => ({ ok: false, text: t }))).map((x) =>
+        `<li class="${x.ok ? 'ok' : 'bad'}">${x.ok ? '✓' : '✕'} ${esc(x.text)}</li>`).join('')}</ol>${q.error ? `<div class="ap-why">${esc(q.error)}</div>` : ''}`;
+    else if (q.status === 'DISCARDED') body = `${steps(q)}`;
+    return `<div class="ap-req"><div class="ap-req-h"><span class="ap-req-q">“${esc(q.words)}”</span><span class="pill ${pill}">${esc(q.status_label)}</span></div>
+      <div class="ap-eg">Asked by ${esc(q.asked_by)}${q.decided_by ? ` · ${q.status === 'DISCARDED' ? 'discarded' : 'approved'} by ${esc(q.decided_by)}` : ''}</div>${body}</div>`;
+  }
+  const steps = (q) => q.steps.length ? `<ol class="ap-steplist">${q.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
+  let reqTimer = null;
+  function watchRequests() {
+    clearTimeout(reqTimer);
+    const busy = AP.requests && !AP.requests.failed && AP.requests.open.some((q) => ['DRAFTING', 'CHECKING', 'APPLYING'].includes(q.status));
+    if (busy && AP.screen === 'app') reqTimer = setTimeout(async () => { await refresh('requests'); watchRequests(); }, 2500);
+  }
+  async function askAssistant(words) {
+    if (!words.trim()) return;
+    try { await call('qb_requests', { app: AP.app, action: 'ask', words }); }
+    catch (e) { return say(e.message); }
+    await refresh('requests'); watchRequests();
+  }
+  function approveRequest(id) {
+    const q = AP.requests.open.find((x) => x.id === id);
+    return dialog({
+      title: 'Apply this request?', ok: 'Approve and apply',
+      sub: 'Each step runs as you. Adding someone to QuickBooks goes through your approval road — your company’s rules still apply.',
+      body: `<ol class="ap-steplist">${q.steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>`,
+      submit: () => call('qb_requests', { app: AP.app, action: 'approve', id }),
+    }).then(async (ok) => {
+      if (!ok) return;
+      say('Applied — see each step on the card');
+      await refresh('requests', 'over', 'people', 'setup');
+      setTimeout(() => refresh('people', 'over'), 6000);
+    });
   }
 
   // ── dialogs ─────────────────────────────────────────────────────────────
@@ -2123,7 +2171,8 @@ async function boot() {
       if (!a.connected) return viewer().can_connect ? connectDialog(d.open) : say('Only a QuickBooks admin connects apps');
       AP.screen = 'app'; AP.app = d.open; AP.sub = d.go || AP.sub || 'review';
       render();
-      return refresh('people', 'review', ...(viewer().sees_pay ? ['setup'] : []));
+      await refresh('people', 'review', 'requests', ...(viewer().sees_pay ? ['setup'] : []));
+      return watchRequests();
     }
     if ('home' in d) { AP.screen = 'home'; render(); return refresh('over'); }
     if (d.sub) { AP.sub = d.sub; render(); return subLoad(); }
@@ -2162,7 +2211,16 @@ async function boot() {
     if (act === 'post') return postDialog(d.task);
     if (act === 'exclude') return excludeDialog(d.id);
     if (act === 'bring-back') { try { await call('qb_review', { app: AP.app, action: 'bring_back', ids: [d.id] }); say('Brought back — checked again on the next run'); } catch (e) { say(e.message); } return refresh('over', 'review', 'posted'); }
-    if (act === 'assist') return assist(d.where);
+    if (act === 'ask') { const box = $a('#apAsk'); const w = (box && box.value) || ''; if (box) box.value = ''; return askAssistant(w); }
+    if (act === 'answer') {
+      const q = AP.requests.open.find((x) => x.id === d.id);
+      const ans = (document.querySelector(`[data-answer="${d.id}"]`) || {}).value || '';
+      if (!ans.trim()) return;
+      try { await call('qb_requests', { app: AP.app, action: 'discard', id: d.id }); } catch (e) { /* the new one carries the words */ }
+      return askAssistant(`${q.words}\n${ans}`);
+    }
+    if (act === 'approve-req') return approveRequest(d.id);
+    if (act === 'discard-req') { try { await call('qb_requests', { app: AP.app, action: 'discard', id: d.id }); say('Discarded'); } catch (e) { say(e.message); } return refresh('requests'); }
     if (act === 'disconnect') {
       const a = spec();
       const ok = await dialog({ title: `Disconnect ${a.name}?`, ok: 'Disconnect', danger: true,
@@ -2193,7 +2251,7 @@ async function boot() {
     if (t.tagName === 'DETAILS' && t.dataset.keep) AP.open[t.dataset.keep] = t.open;
   }
   function onKey(ev) {
-    if (ev.key === 'Enter' && ev.target.id === 'apAsk') { const b = document.querySelector('[data-act="assist"]'); if (b) b.click(); }
+    if (ev.key === 'Enter' && ev.target.id === 'apAsk') { const b = document.querySelector('[data-act="ask"]'); if (b) b.click(); }
   }
 
   let wired = false;
