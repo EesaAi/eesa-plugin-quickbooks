@@ -240,11 +240,6 @@
   /* A row's buttons drop below its words rather than squeezing them into a column. */
   #tab-apps .item { flex-wrap: wrap; }
   #tab-apps .item .main { flex: 1 1 220px; }
-  .ap-banner { border: 1.5px dashed var(--warn); border-radius: var(--r); padding: 11px 13px; margin-bottom: 16px;
-               display: flex; flex-direction: column; gap: 9px; font-size: 14px; color: var(--label2); }
-  .ap-banner b { color: var(--warn); display: block; font-size: 15px; }
-  .ap-banner .ap-bc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .ap-banner label { display: inline-flex; gap: 6px; align-items: center; color: var(--label); }
   .ap-how { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); margin-top: 14px; }
   .ap-how summary { list-style: none; cursor: pointer; padding: 13px 16px; display: flex; justify-content: space-between;
                     gap: 10px; font-weight: 600; font-size: 15.5px; }
@@ -385,14 +380,40 @@
   .dlg .ap-li .ic.yes { color: var(--in); } .dlg .ap-li .ic.no { color: var(--out); }
   .dlg .ap-li small { display: block; color: var(--label2); font-size: 13px; }
   .dlg.ap-wide { width: min(720px, 100%); }
-  .ap-flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 12px; font-size: 13px; }
-  .ap-flow span { background: var(--fill); border-radius: 8px; padding: 5px 9px; font-weight: 600; }
-  .ap-flow i { color: var(--label3); font-style: normal; }
-  .ap-fw { margin: 0; padding-left: 20px; display: grid; gap: 10px; font-size: 14.5px; color: var(--label2); }
-  .ap-fw b { color: var(--label); }
-  table.ap-matrix { border-collapse: collapse; font-size: 13.5px; width: 100%; min-width: 520px; }
-  table.ap-matrix th, table.ap-matrix td { padding: 7px 8px; border-top: 1px solid var(--sep); text-align: left; vertical-align: top; }
-  table.ap-matrix thead th { border-top: 0; font-size: 12px; color: var(--label2); }
+  .ap-check { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); margin: 12px 0 16px; overflow: hidden; }
+  .ap-check-h { font-size: 13px; font-weight: 700; color: var(--label2); text-transform: uppercase; letter-spacing: .04em; padding: 12px 16px 4px; }
+  .ap-check-row { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0;
+                  border-top: 1px solid var(--sep); padding: 11px 16px; cursor: pointer; color: inherit; font: inherit; }
+  .ap-check-row:first-of-type { border-top: 0; }
+  .ap-check-row .t { flex: 1; min-width: 0; } .ap-check-row .t b { display: block; font-size: 15.5px; }
+  .ap-check-row .t small { display: block; color: var(--label2); font-size: 13px; }
+  .ap-check-n { width: 26px; height: 26px; border-radius: 999px; background: var(--fill); display: grid; place-items: center;
+                font-size: 13px; font-weight: 700; color: var(--label2); flex: none; }
+  .ap-check-n.done { background: var(--qb); color: #fff; }
+  .ap-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+  .ap-chip { border: 1px solid var(--sep); background: var(--group); border-radius: 999px; padding: 6px 12px; font: 600 13.5px/1.2 inherit;
+             color: var(--label2); cursor: pointer; }
+  .ap-chip span { color: var(--label3); font-weight: 600; margin-left: 2px; }
+  .ap-chip[aria-pressed="true"] { background: var(--qb); border-color: var(--qb); color: #fff; }
+  .ap-chip[aria-pressed="true"] span { color: rgba(255,255,255,.8); }
+  .ap-person { padding: 12px 16px; border-top: 1px solid var(--sep); display: grid; gap: 7px; }
+  .ap-person:first-child { border-top: 0; }
+  .ap-pname { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; } .ap-pname b { font-size: 16px; }
+  .ap-pname .meta { font-size: 13px; color: var(--label2); }
+  .ap-mrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ap-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+  .ap-addrow { margin: 8px 4px 0; }
+  .ap-assist { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px 14px; margin-bottom: 14px; }
+  .ap-assist label { display: block; font-size: 13px; font-weight: 600; color: var(--label2); margin-bottom: 7px; }
+  .ap-assist-row { display: flex; gap: 8px; } .ap-assist-row input { flex: 1; min-width: 0; }
+  .ap-assist-out { margin-top: 10px; font-size: 14.5px; border-top: 1px solid var(--sep); padding-top: 8px; }
+  .ap-assist-out p { margin: 6px 0; } .ap-assist-out table { border-collapse: collapse; font-size: 13.5px; }
+  .ap-assist-out td, .ap-assist-out th { padding: 3px 10px 3px 0; text-align: left; }
+  .ap-steprow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 14.5px; margin: 6px 0; }
+  .dlg .ap-steprow input.pick { width: auto; padding: 6px 8px; }
+  .dlg select { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--sep); border-radius: 9px; background: var(--bg); color: var(--label); }
+  .dlg .ap-chips { margin-top: 4px; }
+  .ap-rule-read { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--qb-soft); font-size: 14px; font-weight: 600; }
   .ap-toast { position: fixed; left: 50%; bottom: calc(22px + var(--safe)); transform: translateX(-50%); background: var(--label); color: var(--bg);
               padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 600; z-index: 60;
               box-shadow: 0 8px 30px rgba(0,0,0,.2); max-width: calc(100% - 32px); text-align: center; }
@@ -416,7 +437,7 @@
     <button role="tab" data-tab="ask" aria-selected="false">Ask</button>
     <button role="tab" data-tab="approvals" aria-selected="false">Approvals<span
       class="badge" id="apprDot" hidden>0</span></button>
-    <!-- Shown only to QuickBooks admins while it is a preview: see the Apps script. -->
+    <!-- Anyone with a QuickBooks role; what is inside follows their role. -->
     <button role="tab" data-tab="apps" aria-selected="false" id="appsTab" hidden>Apps<span
       class="badge" id="appsDot" hidden>0</span></button>
     <button role="tab" data-tab="access" aria-selected="false">Access</button>
@@ -1413,7 +1434,7 @@ async function boot() {
       + esc(e.message) + '</div></div>';
   }
   paintChips();
-  if (window.appsPreviewFor) $('#appsTab').hidden = !appsPreviewFor(ACCESS);
+  if (window.appsVisibleFor) { $('#appsTab').hidden = !appsVisibleFor(ACCESS); if (window.appsBadge) appsBadge(); }
   loadAll();
   loadApprovals();
   loadHistory();
@@ -1421,987 +1442,771 @@ async function boot() {
 </script>
 <script>
 /*
-  ── Apps — PREVIEW: the financial side of Eesa's apps, connected ──────────
+  ── Apps — the financial side of Eesa's apps, joined to QuickBooks ───────────
 
-  WHAT IT IS FOR
-    Connecting an Eesa app (Chups, Attendance, Invoice) to QuickBooks, and
-    giving QuickBooks' assistant tasks over it — Ask, Post, Keep in step,
-    Watch, Routine — without anyone on the accounting team needing to know
-    what a tool or an endpoint is. Built before anything behind it, so the
-    people who will use it can check it first.
+  WHO THIS IS FOR
+    The accounting team. They connect an app (QuickBooks admins only), say who
+    each person is in QuickBooks, set each person's pay, choose what gets
+    posted — and post it. Every one of those decisions lives in Eesa; QuickBooks
+    only receives what is posted, through the same road as the Approvals tab.
 
-  EVERYTHING ON IT IS EXAMPLE DATA
-    Nothing reads an app and nothing reaches QuickBooks: connecting, posting
-    and alerts change this page's memory and nothing else. The people, figures
-    and customers are invented — this repository is public, so nothing real
-    may be written into it. And it is why the tab shows only to QuickBooks'
-    own "may connect apps" roles (CAN_CONNECT_APPS in
-    apps/access/quickbooks_roles.py): made-up figures must never sit in front
-    of a bookkeeper who would take them for the books.
-
-  WHAT IS REAL
-    Who is looking, and their QuickBooks role, from quickbooks_my_access — so
-    what the page lets you set up is decided the way it will be. The others in
-    "See it as" are examples of the roles this company has recorded. Ask hands
-    its question to the real Ask tab, which does read the books.
-
-  THE RULES IT SHOWS, which the real version keeps
-    Only the app's financial side is shared. Nothing posts until the task's
-    owner posts it. Your QuickBooks role decides what you can set up and post.
-    A task never deletes, and a row is posted once — even from two tasks.
+  NOTHING ABOUT PAY IS DECIDED HERE
+    Overtime rules, pay periods and rates are the team's, per person. The page
+    offers starting points and the assistant can draft from plain words; a
+    person confirms every one. The server (apps/access/quickbooks_apps.py)
+    decides who may see and change what, from their QuickBooks role; the page
+    only draws what it is given, so a screen outside somebody's role is said,
+    not shown as a wall of errors.
 */
 (function () {
   'use strict';
 
-  var CONNECT_ROLES = ['primary_admin', 'company_admin'];
-  // The other people in "See it as". Areas copied from ROLES in
-  // apps/access/quickbooks_roles.py; the real screen reads each person's own
-  // from quickbooks_my_access and has no use for this table.
-  var PREVIEW_ROLES = {
-    standard_ar: { role: 'Accounts receivable manager', areas: ['sales', 'inventory', 'customers', 'bank_deposits', 'taxes', 'time', 'reports_ar'], viewOnly: [], write: true },
-    standard_ap: { role: 'Accounts payable manager', areas: ['expenses', 'inventory', 'vendors', 'taxes', 'reports_ap'], viewOnly: [], write: true },
-    bookkeeper: { role: 'Bookkeeper', areas: ['sales', 'expenses', 'inventory', 'customers', 'vendors', 'time', 'reports_ar', 'reports_ap'], viewOnly: ['vendors'], write: true },
-    reports_only: { role: 'Reports only', areas: ['reports_financial', 'reports_ar', 'reports_ap'], viewOnly: [], write: false },
-  };
-  var TEAM = [['Maya', 'standard_ar'], ['Omar', 'standard_ap'], ['Tess', 'bookkeeper'], ['Lena', 'reports_only']];
+  window.appsVisibleFor = (access) => !!(access && access.has_access);
 
-  window.appsPreviewFor = function (access) {
-    return !!access && CONNECT_ROLES.indexOf(access.role_key) !== -1;
+  const AP = {
+    screen: 'home', app: 'attendance', sub: 'review', filter: 'all',
+    over: null, people: null, setup: null, period: null, review: null, posted: null, excluded: null,
+    accounts: null, busy: false, err: '', open: {}, assist: null, periodPick: { schedule: '', start: '' },
   };
+  const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // ── example data: yesterday's day, in whatever words this browser uses ──
-  const DAY = 864e5;
-  const dayWord = (n) => new Date(Date.now() - n * DAY).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const D1 = dayWord(1), D2 = dayWord(2);
-
-  const PIN = '<svg viewBox="0 0 56 76" aria-hidden="true"><path d="M30.5 67L13 42.5A21.5 21.5 0 1 1 48 42.5Z" fill="#F47729"/><circle cx="31" cy="29.5" r="13" fill="#fff"/><circle cx="41.5" cy="29.5" r="8.5" fill="#F47729"/></svg>';
-  const PAUSE = '<svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><rect x="2" y="1.5" width="2" height="7" fill="currentColor"/><rect x="6" y="1.5" width="2" height="7" fill="currentColor"/></svg>';
-
-  // Each app shares only its FINANCIAL side; everything else stays in it.
-  const APPS = {
-    chups: { name: 'Chups', mark: 'chups', icon: PIN, what: 'Restaurant sales, refunds and billed customers',
-             notShared: ['Kitchen, tasting and packing', 'Menus and dishes', 'Staff schedules and chats', 'Customer reviews'] },
-    attendance: { name: 'Attendance', mark: 'att', icon: 'A', what: 'Approved hours, for payroll',
-                  notShared: ['Where people checked in', 'Phone evidence and location', 'Who is in today', 'Pay rates'] },
-    invoice: { name: 'Invoice → Chups', mark: 'inv', icon: 'I', what: 'Checked supplier bills',
-               notShared: ['Photos and PDFs of bills', 'Barcode memory'] },
-  };
-  // A column is [key, label, kind]; `name` marks who a row is about. `area` is
-  // the QuickBooks area whose people may see a dataset — whoever sees Sales in
-  // QuickBooks sees Chups' sales, and nobody else does. `fits` is what
-  // QuickBooks record the data naturally becomes, offered first.
-  const DATA = {
-    chups: [
-      { id: 'sales', area: 'sales', short: 'daily sales', fits: ['receipt', 'journal'], title: 'Sales for a day, by payment method', note: 'One row per payment method per day — what the tills and the website took.',
-        cols: [['day', 'Day', 'date'], ['method', 'Payment method', 'choice'], ['amount', 'Amount', 'money'], ['orders', 'Orders', 'number']],
-        rows: [{ day: D1, method: 'card', amount: 1048.60, orders: 22 }, { day: D1, method: 'meal_pass', amount: 212.40, orders: 5 },
-               { day: D1, method: 'cash', amount: 176.25, orders: 7 }, { day: D1, method: 'zelle', amount: 58.00, orders: 1 }] },
-      { id: 'refunds', area: 'sales', short: 'refunds', fits: ['refund', 'journal'], title: 'Refunds', note: 'Money given back, with the order and the reason.',
-        cols: [['day', 'Day', 'date'], ['order', 'Order', 'text'], ['amount', 'Amount', 'money'], ['reason', 'Reason', 'text']],
-        rows: [{ day: D1, order: 'EX-10482', amount: 18.50, reason: 'Missing item' }] },
-      { id: 'customers', area: 'customers', short: 'billed customers', fits: ['customer'], title: 'Billed customers', note: 'Catering and account customers who are invoiced, with contact details.',
-        cols: [['name', 'Name', 'name'], ['email', 'Email', 'email'], ['phone', 'Phone', 'text'], ['city', 'City', 'text']],
-        rows: [{ name: 'Lakeside Events', email: 'orders@lakeside.example', phone: '(555) 010-0150', city: 'Springfield' },
-               { name: 'R. Patel', email: 'rpatel@example.com', phone: '(555) 010-0170', city: 'Riverton' }] },
-    ],
-    attendance: [
-      { id: 'hours', area: 'time', short: 'hours', fits: ['time', 'journal'], title: 'Hours per person per day', note: 'Worked hours for a day, and whether a manager approved them. Pay rates are never shared.',
-        cols: [['person', 'Person', 'name'], ['email', 'Email', 'email'], ['day', 'Day', 'date'], ['hours', 'Hours', 'number'], ['minutes', 'Minutes', 'number'],
-               ['first_in', 'First in', 'time'], ['last_out', 'Last out', 'time'], ['open', 'Still open', 'yesno'], ['approval', 'Approval', 'choice']],
-        rows: [
-          { person: 'Alex Rivera', email: 'alex@example.com', day: D1, hours: 8, minutes: 29, first_in: '7:02 AM', last_out: '3:31 PM', open: 'no', approval: 'approved' },
-          { person: 'Sam Lee', email: 'sam@example.com', day: D1, hours: 6, minutes: 45, first_in: '10:00 AM', last_out: '4:45 PM', open: 'no', approval: 'approved' },
-          { person: 'Priya Shah', email: 'priya@example.com', day: D1, hours: 7, minutes: 10, first_in: '8:15 AM', last_out: '3:25 PM', open: 'no', approval: 'approved' },
-          { person: 'Jordan Kim', email: 'jordan@example.com', day: D1, hours: 5, minutes: 20, first_in: '11:40 AM', last_out: '5:00 PM', open: 'no', approval: 'pending' },
-          { person: 'Chris Park', email: 'chris@example.com', day: D1, hours: null, minutes: null, first_in: '9:10 AM', last_out: '', open: 'yes', approval: 'pending' }] },
-    ],
-    invoice: [
-      { id: 'bills', area: 'expenses', short: 'checked bills', fits: ['bill', 'vendor'], title: 'Checked supplier bills', note: 'Bills read from PDFs and photos, after a person checked the lines.',
-        cols: [['supplier', 'Supplier', 'name'], ['bill_date', 'Bill date', 'date'], ['number', 'Bill number', 'text'], ['total', 'Total', 'money']],
-        rows: [{ supplier: 'Restaurant Depot', bill_date: D2, number: 'RD-40213', total: 1284.55 }] },
-    ],
-  };
-  // What the books already hold, for a Watch to compare against.
-  const COMPARE = { sales: { label: 'Deposits in QuickBooks for the same day and method', by: 'method',
-                             rows: { card: 1002.63, meal_pass: 212.40, cash: 176.25, zelle: 58.00 } } };
-  const QB_CONTACTS = {
-    customer: [{ name: 'Walk-in customers', email: '', phone: '', city: '' },
-               { name: 'Lakeside Events', email: 'orders@lakeside.example', phone: '(555) 010-0149', city: 'Springfield' },
-               { name: 'Amy’s Bird Sanctuary', email: 'birds@example.com', phone: '(555) 010-3311', city: 'Bayshore' }],
-    vendor: [{ name: 'Restaurant Depot', email: '', phone: '(555) 010-0100' }, { name: 'Three Leaf Foods', email: 'ar@threeleaf.example', phone: '(555) 010-0122' }],
-  };
-  const QB = { employee: ['Alex Rivera', 'Sam Lee', 'Priya Shah', 'John Johnson'],
-               customer: QB_CONTACTS.customer.map((x) => x.name), vendor: QB_CONTACTS.vendor.map((x) => x.name),
-               account: ['Undeposited Funds', 'Cash on hand', 'Checking', 'Meal pass liability', 'Food cost', 'Payroll clearing'],
-               item: ['Food sales', 'Catering', 'Hours'] };
-  // What QuickBooks accepts, each with the QuickBooks area that covers it —
-  // the same area the gate checks (quickbooks_roles.py _AREA_ENTITIES).
-  // A field is [key, label, kind, required, suggestion].
-  const ACTIONS = [
-    { id: 'time', verb: 'Create', what: 'time activity', area: 'time', note: 'Hours an employee worked on a day — what QuickBooks Payroll reads for hourly pay.',
-      fields: [['employee', 'Employee', 'employee', 1], ['date', 'Date', 'date', 1], ['hours', 'Hours', 'number', 1], ['minutes', 'Minutes', 'number', 0],
-               ['description', 'Description', 'text', 0], ['billable', 'Billable', 'yesno', 0]] },
-    { id: 'receipt', verb: 'Create', what: 'sales receipt', area: 'sales', note: 'Money taken at the time of sale, deposited to an account.',
-      fields: [['customer', 'Customer', 'customer', 1, 'Walk-in customers'], ['date', 'Date', 'date', 1], ['deposit', 'Deposit to', 'account', 1, 'Undeposited Funds'],
-               ['item', 'Product/service', 'item', 1, 'Food sales'], ['amount', 'Amount', 'money', 1], ['memo', 'Memo', 'text', 0]] },
-    { id: 'refund', verb: 'Create', what: 'refund receipt', area: 'sales', note: 'Money given back to a customer.',
-      fields: [['customer', 'Customer', 'customer', 1, 'Walk-in customers'], ['date', 'Date', 'date', 1], ['account', 'Refund from', 'account', 1, 'Undeposited Funds'],
-               ['amount', 'Amount', 'money', 1], ['memo', 'Memo', 'text', 0]] },
-    { id: 'bill', verb: 'Create', what: 'bill', area: 'expenses', note: 'What you owe a vendor, to be paid later.',
-      fields: [['vendor', 'Vendor', 'vendor', 1], ['date', 'Bill date', 'date', 1], ['number', 'Bill no.', 'text', 0],
-               ['account', 'Expense account', 'account', 1, 'Food cost'], ['amount', 'Amount', 'money', 1]] },
-    { id: 'journal', verb: 'Create', what: 'journal entry', area: 'accounting', note: 'A debit and a credit between two accounts.',
-      fields: [['date', 'Date', 'date', 1], ['debit', 'Debit account', 'account', 1, 'Payroll clearing'], ['credit', 'Credit account', 'account', 1, 'Checking'],
-               ['amount', 'Amount', 'money', 1], ['memo', 'Memo', 'text', 0]] },
-    { id: 'customer', verb: 'Add or update', what: 'customer', area: 'customers', sync: true, note: 'Finds the customer in QuickBooks, updates what changed, or adds them.',
-      fields: [['name', 'Display name', 'text', 1], ['email', 'Email', 'email', 0], ['phone', 'Phone', 'text', 0], ['city', 'City', 'text', 0]] },
-    { id: 'vendor', verb: 'Add or update', what: 'vendor', area: 'vendors', sync: true, note: 'Finds the vendor in QuickBooks, updates what changed, or adds them.',
-      fields: [['name', 'Display name', 'text', 1], ['email', 'Email', 'email', 0], ['phone', 'Phone', 'text', 0]] },
-    { id: 'delete', verb: 'Delete', what: 'records', area: '', never: 'A task never deletes. To take something back, Undo it from Posted — an approver deletes it.' },
-  ];
-  // The five things the QuickBooks assistant can be given.
-  const TYPES = [
-    { id: 'ask', name: 'Ask', mode: 'read', d: 'Answers a question across this app and your books. Changes nothing.' },
-    { id: 'post', name: 'Post', mode: 'write', d: 'Turns this app’s data into QuickBooks transactions. A person posts each one.' },
-    { id: 'sync', name: 'Keep in step', mode: 'write', d: 'Adds or updates QuickBooks customers and vendors from this app. A person approves each.' },
-    { id: 'watch', name: 'Watch', mode: 'read', d: 'Checks this app against your books and tells someone when something’s off.' },
-    { id: 'routine', name: 'Routine', mode: 'mixed', d: 'Several tasks in order, stopping for you to check — like month-end.' },
-  ];
-  const EXAMPLES = {
-    chups: { ask: 'How much did Chups take by card last week, and did it all reach the bank?', post: 'Post each day’s sales as sales receipts',
-             sync: 'Keep QuickBooks customers in step with billed customers', watch: 'Tell me when card sales and deposits differ',
-             routine: 'Month-end: post sales, check deposits, send me a summary' },
-    attendance: { ask: 'How many approved hours were there last week?', post: 'Post approved hours as time activities', sync: '',
-                  watch: 'Tell me when hours aren’t approved', routine: 'Weekly payroll: post hours, check, send the summary' },
-    invoice: { ask: 'What did we spend with Restaurant Depot last month?', post: 'Post checked bills to QuickBooks',
-               sync: 'Keep QuickBooks vendors in step with suppliers', watch: 'Tell me about any bill over $5,000', routine: '' },
-  };
-  const STEPS = { post: ['Take', 'Do', 'Fill in', 'Check'], sync: ['Take', 'Find', 'Keep in step', 'Check'],
-                  watch: ['Watch', 'Alert when', 'Tell', 'Check'], routine: ['Steps', 'When', 'Check'] };
-  const DAILY = /morning|night|Weekdays/;
-
-  // ── state ─────────────────────────────────────────────────────────────
-  let PEOPLE = [], S = null;
-  function people() {
-    const a = ACCESS || {};
-    const first = String(a.name || a.email || 'You').trim().split(/[\s@.]+/)[0] || 'You';
-    const me = { key: 'me', you: true, who: first.charAt(0).toUpperCase() + first.slice(1), roleKey: a.role_key || '',
-                 role: a.role_label || 'No access', areas: a.areas || [], viewOnly: a.view_only_areas || [], write: !!a.can_write_in_quickbooks };
-    return [me].concat(TEAM.map((t) => Object.assign({ key: t[0].toLowerCase(), who: t[0], roleKey: t[1] }, PREVIEW_ROLES[t[1]])));
+  // ── talking to Eesa ─────────────────────────────────────────────────────
+  async function call(tool, args) {
+    const r = await platform(tool, args || {});
+    if (!r || r.ok === false) {
+      const err = new Error((r && r.error) || 'That did not work. Try again.');
+      err.code = r && r.code;
+      throw err;
+    }
+    return r;
   }
-  function fresh() {
-    const me = PEOPLE[0].who;
-    return {
-      person: 'me', screen: { name: 'home' }, sub: 'tasks', howOpen: true, nextRef: 1080, b: null,
-      connected: { attendance: { by: me, on: dayWord(23) }, chups: { by: me, on: dayWord(2) } },
-      matches: { 'Alex Rivera': 'Alex Rivera', 'Sam Lee': 'Sam Lee' },
-      tasks: [
-        { id: 't1', type: 'post', app: 'attendance', name: 'Daily hours', owner: me, on: true, when: 'Every morning at 7:00', last: `${D2}: 2 posted, 1 excluded`,
-          source: 'hours', action: 'time', conds: [['open', 'is', 'no'], ['approval', 'is', 'approved']],
-          map: { employee: { how: 'match', col: 'email' }, date: { how: 'col', col: 'day' }, hours: { how: 'col', col: 'hours' }, minutes: { how: 'col', col: 'minutes' },
-                 description: { how: 'words', text: 'Attendance · {First in} – {Last out}' }, billable: { how: 'fixed', value: 'No' } } },
-        { id: 't2', type: 'post', app: 'chups', name: 'Daily sales', owner: me, on: true, when: 'Every night at 11:00', last: `${D2}: 4 posted`,
-          source: 'sales', action: 'receipt', conds: [],
-          map: { customer: { how: 'fixed', value: 'Walk-in customers' }, date: { how: 'col', col: 'day' },
-                 deposit: { how: 'table', col: 'method', table: { card: 'Undeposited Funds', meal_pass: 'Meal pass liability', cash: 'Cash on hand', zelle: 'Checking' } },
-                 item: { how: 'fixed', value: 'Food sales' }, amount: { how: 'col', col: 'amount' }, memo: { how: 'words', text: 'Chups {Payment method} sales, {Orders} orders' } } },
-        { id: 't3', type: 'watch', app: 'chups', name: 'Card sales vs deposits', owner: 'Maya', on: true, when: 'Every morning at 7:00', last: `${D2}: all clear`,
-          source: 'sales', compare: true, cond: { kind: 'differs', amount: 20 }, tell: { who: ['Maya', me], how: ['In the QuickBooks app', 'Email'], often: 'As it happens' } },
-        { id: 't4', type: 'routine', app: 'chups', name: 'Month-end close', owner: me, on: false, when: 'Last day of the month at 6:00 PM', last: 'Not run yet',
-          steps: [{ kind: 'task', id: 't2' }, { kind: 'task', id: 't3' }, { kind: 'wait' }, { kind: 'summary' }] },
-      ],
-      review: [], picked: {}, alerts: [],
-      posted: [
-        { key: 'p1', app: 'attendance', area: 'time', task: 'Daily hours', day: D2, who: `Alex Rivera · ${dayWord(3)}`, text: 'Employee: Alex Rivera · Hours: 8 · Minutes: 5', by: me, ref: 'Time activity 1077' },
-        { key: 'p2', app: 'attendance', area: 'time', task: 'Daily hours', day: D2, who: `Sam Lee · ${dayWord(3)}`, text: 'Employee: Sam Lee · Hours: 6 · Minutes: 30', by: me, ref: 'Time activity 1078' },
-        { key: 'p3', app: 'chups', area: 'sales', task: 'Daily sales', day: D2, who: `${dayWord(3)} · card`, text: 'Amount: 1,102.40 · Customer: Walk-in customers · Deposit to: Undeposited Funds', by: me, ref: 'Sales receipt 1079' },
-      ],
-      excluded: [{ id: 'e1', key: 'e1', app: 'attendance', area: 'time', task: 't1', go: true, label: 'New time activity', title: `Priya Shah · ${dayWord(3)}`,
-                   detail: 'Hours: 2 · Minutes: 10', by: me, why: 'Training day, not paid hours' }],
+  async function refresh(...what) {
+    const jobs = {
+      over: async () => { AP.over = await call('qb_apps'); },
+      people: async () => { AP.people = await call('qb_people', { app: AP.app }); },
+      setup: async () => { AP.setup = await call('qb_pay_setup'); },
+      review: async () => { AP.review = await call('qb_review', { app: AP.app, status: 'open' }); },
+      posted: async () => {
+        const [p, x] = await Promise.all([call('qb_review', { app: AP.app, status: 'posted' }),
+                                          call('qb_review', { app: AP.app, status: 'excluded' })]);
+        AP.posted = p; AP.excluded = x;
+      },
+      period: async () => {
+        if (!AP.periodPick.schedule) { AP.period = null; return; }
+        AP.period = await call('qb_pay_period', { app: AP.app, schedule_id: AP.periodPick.schedule,
+                                                  start: AP.periodPick.start || undefined });
+      },
     };
+    AP.err = '';
+    await Promise.all(what.map((w) => jobs[w]().catch((e) => {
+      AP[w] = { failed: e.message, code: e.code };
+    })));
+    render();
   }
 
-  // ── small helpers ─────────────────────────────────────────────────────
-  const ME = () => PEOPLE.filter((p) => p.key === S.person)[0] || PEOPLE[0];
-  const isAdmin = (p) => CONNECT_ROLES.indexOf(p.roleKey) !== -1;
-  const covers = (area) => { const p = ME(); return !!area && p.write && p.areas.indexOf(area) !== -1 && p.viewOnly.indexOf(area) === -1; };
-  const areaWord = (a) => AREA_WORDS[a] || a;
-  // Seeing follows QuickBooks: view-only still sees.
-  const sees = (p, area) => p.areas.indexOf(area) !== -1;
-  const canSee = (ds) => !!ds && sees(ME(), ds.area);
-  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
-  const listWords = (xs) => xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
-  const uniq = (xs) => xs.filter((x, i) => xs.indexOf(x) === i);
-  const act = (id) => ACTIONS.filter((a) => a.id === id)[0];
-  const typ = (id) => TYPES.filter((t) => t.id === id)[0];
-  const task = (id) => S.tasks.filter((t) => t.id === id)[0];
-  const taskData = (t) => t && t.source ? dataset(t.app, t.source) : null;
-  const dataset = (app, id) => (DATA[app] || []).filter((d) => d.id === id)[0];
-  const colOf = (ds, k) => ds.cols.filter((c) => c[0] === k)[0];
-  const cash = (n) => Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const plural = (w) => w.replace(/y$/, 'ie') + 's';
-  const shown = (v, kind) => (v == null || v === '') ? '' : kind === 'money' ? cash(v) : String(v);
-  const tok = (s) => `<span class="ap-tok">${esc(s)}</span>`;
-  const rowName = (r) => r.person || r.name || r.supplier || r.order || [r.day, r.method].filter(Boolean).join(' · ');
-  const rowTitle = (r) => r.person ? `${r.person} · ${r.day}` : rowName(r);
-  // What makes a row the same row tomorrow. With the QuickBooks record type it
-  // is the once-only key: posted from one task, never again from another.
-  const rowKey = (r) => [r.person, r.name, r.supplier, r.number, r.order, r.day, r.method].filter(Boolean).join('|');
-  const ownerOf = (i) => (task(i.task) || {}).owner;
-  const mineToPost = () => S.review.filter((i) => i.go && ownerOf(i) === ME().who);
-  const alertsForMe = () => S.alerts.filter((x) => !x.seen && task(x.task).tell.who.indexOf(ME().who) !== -1);
-  // The data a kind of task can start from: Keep in step needs rows that are somebody.
-  const startsFrom = (key, type) => DATA[key].filter((ds) => type !== 'sync' || ds.cols.some((c) => c[2] === 'name' || c[2] === 'email'));
-  const fitting = (ds, type) => ds.fits.map(act).filter((a) => (type === 'sync') === !!a.sync);
-  // Why a kind of task can't be set up here by this person — '' when it can.
-  function cannot(key, type) {
-    const seen = DATA[key].filter(canSee);
-    if (!seen.length) return `Nothing ${APPS[key].name} shares is inside your QuickBooks role.`;
-    if (type === 'ask' || type === 'watch') return '';
-    const acts = uniq([].concat.apply([], startsFrom(key, type === 'routine' ? 'post' : type).filter(canSee)
-      .map((ds) => fitting(ds, type === 'routine' ? 'post' : type))));
-    if (!acts.length) return type === 'sync' ? `${APPS[key].name} shares nothing to keep in step.` : `${APPS[key].name} shares nothing to post.`;
-    if (acts.some((a) => covers(a.area))) return '';
-    return `Needs a QuickBooks role that covers ${listWords(uniq(acts.map((a) => areaWord(a.area).toLowerCase())))}.`;
-  }
-  // A name from what was picked, until the person writes their own.
-  function autoName(b) {
-    const ds = b.source && dataset(b.app, b.source); const a = b.action && act(b.action);
-    if (b.type === 'routine') return (EXAMPLES[b.app].routine || 'Routine').split(':')[0];
-    if (!ds) return 'New task';
-    if (b.type === 'post') return `Post ${ds.short}${a ? ` as ${plural(a.what)}` : ''}`;
-    if (b.type === 'sync') return a ? `Keep ${plural(a.what)} in step` : `Keep ${ds.short} in step`;
-    if (!b.cond) return `Watch ${ds.short}`;
-    return b.cond.kind === 'differs' ? `${cap(ds.short)} vs deposits` : b.cond.kind === 'over'
-      ? `${cap(ds.short)} over $${Number(b.cond.amount).toLocaleString()}` : `${cap(ds.short)} waiting for approval`;
-  }
-
-  // ── the engine: the same rules the assistant will follow ──────────────
-  function passes(t, row, ds) {
-    for (const [k, op, v] of t.conds || []) {
-      const val = String(row[k] == null ? '' : row[k]); const c = colOf(ds, k);
-      if (op === 'is' && val !== v) return `${c[1]} is ${val || 'empty'}`;
-      if (op === 'is not' && val === v) return `${c[1]} is ${val}`;
-    }
-    return '';
-  }
-  function matchOf(kind, row, key) {
-    if (kind === 'employee') return S.matches[row.person] || '';
-    const val = String(row[key] == null ? '' : row[key]);
-    const hit = (QB_CONTACTS[kind] || []).filter((x) => (x.email && x.email === val) || x.name === val)[0];
-    return hit ? hit.name : '';
-  }
-  function fill(t, row, ds) {
-    const out = []; let missing = '';
-    act(t.action).fields.forEach(([k, label, kind, req]) => {
-      const m = (t.map || {})[k] || { how: 'empty' }; let v = '';
-      if (m.how === 'col') v = shown(row[m.col], (colOf(ds, m.col) || [])[2]);
-      else if (m.how === 'match') v = matchOf(kind, row, m.col);
-      else if (m.how === 'fixed') v = m.value || '';
-      else if (m.how === 'words') v = (m.text || '').replace(/\{([^}]+)\}/g, (_, n) => { const c = ds.cols.filter((x) => x[1] === n)[0]; return c ? shown(row[c[0]], c[2]) : ''; });
-      else if (m.how === 'table') v = (m.table || {})[row[m.col]] || '';
-      if (req && v === '' && !missing) {
-        missing = m.how === 'match' ? `Match ${rowName(row)} to a QuickBooks ${kind}`
-          : m.how === 'table' ? `Pick a QuickBooks ${kind} for “${row[m.col]}”` : `${label} has no value`;
-      }
-      out.push([k, label, v, !!req, kind]);
-    });
-    return { out, missing };
-  }
-  function verdict(t, row) {
-    const ds = dataset(t.app, t.source); const held = passes(t, row, ds);
-    if (held) return { go: false, why: `Waits: ${held}` };
-    const f = fill(t, row, ds);
-    return f.missing ? { go: false, why: f.missing } : { go: true, why: '' };
-  }
-  const RANK = { money: 0, employee: 1, customer: 1, vendor: 1, account: 2, number: 3 };
-  const rank = (k) => (k in RANK ? RANK[k] : 4);
-  function summaryOf(t, row) {
-    return fill(t, row, dataset(t.app, t.source)).out.filter((o) => o[2] !== '' && o[4] !== 'date')
-      .sort((x, y) => rank(x[4]) - rank(y[4])).slice(0, 3).map((o) => `${o[1]}: ${o[2]}`).join(' · ');
-  }
-  // Keep in step: what would change in QuickBooks — add, update, or nothing.
-  // "Nothing" is never offered for review: a change that changes nothing is
-  // refused, as Intuit's own connector refuses it.
-  function syncChange(t, row) {
-    const a = act(t.action); const f = fill(t, row, dataset(t.app, t.source)); const v = {};
-    f.out.forEach((o) => { v[o[0]] = o[2]; });
-    const have = (QB_CONTACTS[a.id] || []).filter((x) => (v.email && x.email === v.email) || x.name === v.name)[0];
-    if (!have) return { kind: 'Add', text: `Add ${v.name || rowName(row)}${v.email ? ` · ${v.email}` : ''}` };
-    const diffs = f.out.filter((o) => o[0] !== 'name' && o[2] && have[o[0]] !== undefined && have[o[0]] !== o[2])
-      .map((o) => `${o[1].toLowerCase()} ${have[o[0]] || '—'} → ${o[2]}`);
-    return diffs.length ? { kind: 'Update', text: `Update ${have.name}: ${diffs.join(', ')}` } : { kind: 'Same', text: `${have.name} is already the same in QuickBooks` };
-  }
-  function watchHits(t) {
-    const ds = dataset(t.app, t.source); const cmp = COMPARE[t.source]; const hits = [];
-    ds.rows.forEach((row) => {
-      if (t.cond.kind === 'differs' && cmp) {
-        const theirs = cmp.rows[row[cmp.by]]; if (theirs == null) return;
-        const gap = Math.abs(row.amount - theirs);
-        if (gap > t.cond.amount) hits.push(`${rowName(row)}: ${APPS[t.app].name} took ${cash(row.amount)}, the QuickBooks deposit is ${cash(theirs)} — ${cash(gap)} apart`);
-      } else if (t.cond.kind === 'over') {
-        const mc = ds.cols.filter((c) => c[2] === 'money')[0];
-        if (mc && row[mc[0]] > t.cond.amount) hits.push(`${rowName(row)}: ${cash(row[mc[0]])} is over ${cash(t.cond.amount)}`);
-      } else if (t.cond.kind === 'pending' && row.approval === 'pending') {
-        hits.push(`${rowTitle(row)}: hours still waiting for a manager’s approval`);
-      }
-    });
-    return hits;
-  }
-  function readyFor(r) {
-    const ids = r.steps.filter((s) => s.kind === 'task').map((s) => s.id);
-    return S.review.filter((i) => i.go && ids.indexOf(i.task) !== -1).length;
-  }
-  // What the assistant does when a task runs.
-  function runTask(t, when) {
-    let n = 0;
-    if (t.type === 'post' || t.type === 'sync') {
-      const ds = dataset(t.app, t.source); const a = act(t.action);
-      S.review = S.review.filter((i) => !(i.task === t.id && !i.go));   // what waited is looked at again
-      ds.rows.forEach((row) => {
-        const key = [t.app, t.source, rowKey(row), t.action].join(':');
-        if ([S.review, S.posted, S.excluded].some((list) => list.some((i) => i.key === key))) return;
-        const v = verdict(t, row); const sc = t.type === 'sync' ? syncChange(t, row) : null;
-        if (sc && sc.kind === 'Same') return;
-        S.review.push({ id: key, key, task: t.id, app: t.app, area: ds.area, go: v.go, why: v.why, label: sc ? `${sc.kind} ${a.what}` : `New ${a.what}`,
-                        title: rowTitle(row), detail: sc ? sc.text : summaryOf(t, row) });
-        if (v.go) n++;
-      });
-      const held = S.review.filter((i) => i.task === t.id && !i.go).length;
-      t.last = `${when}: ${n ? `${n} brought in` : 'nothing new'}${held ? `, ${held} waiting` : ''}`;
-    } else if (t.type === 'watch') {
-      const hits = watchHits(t);
-      hits.forEach((h) => {
-        const id = `${t.id}:${h}`;
-        if (!S.alerts.some((x) => x.id === id)) { S.alerts.unshift({ id, task: t.id, app: t.app, area: taskData(t).area, text: h, when, seen: false }); n++; }
-      });
-      t.last = `${when}: ${hits.length ? `${hits.length} alert${hits.length === 1 ? '' : 's'}` : 'all clear'}`;
-    } else if (t.type === 'routine') {
-      const from = t.waiting || 0; t.waiting = 0;
-      for (let i = from; i < t.steps.length; i++) {
-        const s = t.steps[i];
-        if (s.kind === 'task') n += runTask(task(s.id), when);
-        if (s.kind === 'wait' && readyFor(t)) {
-          t.waiting = i + 1; t.last = `${when}: stopped at step ${i + 1}, waiting for ${t.owner} to post`;
-          return n;
-        }
-      }
-      t.last = `${when}: finished${t.steps.some((s) => s.kind === 'summary') ? `, summary sent to ${t.owner}` : ''}`;
-    }
-    return n;
-  }
-  // A routine waiting on its owner carries on by itself once they are done.
-  function resumeRoutines() {
-    const went = [];
-    S.tasks.forEach((r) => { if (r.type === 'routine' && r.waiting && !readyFor(r)) { runTask(r, 'Just now'); went.push(r.name); } });
-    return went;
-  }
-
-  // ── a task, read back as one sentence ─────────────────────────────────
-  function sentence(t) {
-    const app = APPS[t.app].name;
-    if (t.type === 'post' || t.type === 'sync') {
-      const ds = dataset(t.app, t.source); const a = act(t.action);
-      const conds = (t.conds || []).map(([k, op, v]) => `${colOf(ds, k)[1].toLowerCase()} ${op} ${v}`).join(' and ');
-      return `When ${tok(app)} has ${tok(ds.title.toLowerCase())}${conds ? ` where ${tok(conds)}` : ''}, ${tok(`${a.verb.toLowerCase()} a ${a.what}`)} in QuickBooks for each — checking ${tok(t.when.toLowerCase())}.`;
-    }
-    if (t.type === 'watch') {
-      const ds = dataset(t.app, t.source);
-      const what = t.cond.kind === 'differs' ? `it differs from ${COMPARE[t.source].label.toLowerCase()} by more than $${t.cond.amount}`
-        : t.cond.kind === 'over' ? `an amount is over $${cash(t.cond.amount)}` : 'a day is still waiting for approval';
-      return `Check ${tok(ds.title.toLowerCase())} in ${tok(app)} and tell ${tok(t.tell.who.join(' and '))} when ${tok(what)} — ${tok(t.when.toLowerCase())}.`;
-    }
-    return `Run these steps in order, ${tok(t.when.toLowerCase())}, stopping where it says so.`;
-  }
-  function howWords(t) {
-    const ds = dataset(t.app, t.source);
-    return act(t.action).fields.map(([k, label, kind]) => {
-      const m = t.map[k] || { how: 'empty' };
-      const src = m.how === 'col' ? colOf(ds, m.col)[1].toLowerCase() : m.how === 'match' ? `${colOf(ds, m.col)[1].toLowerCase()}, matched to a ${kind}`
-        : m.how === 'fixed' ? `always “${m.value}”` : m.how === 'words' ? `“${m.text}”` : m.how === 'table' ? `${colOf(ds, m.col)[1].toLowerCase()}, by a table` : '';
-      return src ? `${tok(label)} ← ${esc(src)}` : '';
-    }).filter(Boolean).join(' &nbsp; ');
-  }
-
-  // ── screens ───────────────────────────────────────────────────────────
-  function banner() {
-    return `<div class="ap-banner"><div><b>Preview · example data</b>Nothing here reads your apps or changes QuickBooks yet — it is how
-      connecting apps will work, to check before it is built. Only QuickBooks admins see this tab.</div>
-      <div class="ap-bc"><label for="apPerson">See it as</label><select class="pick" id="apPerson">${PEOPLE.map((p) => `<option value="${p.key}"${p.key === S.person ? ' selected' : ''}>${esc(p.who)}${p.you ? ' (you)' : ''} · ${esc(p.role)}</option>`).join('')}</select>
-      <button class="btn sm" data-apv="morning">Run the 7:00 tasks</button><button class="btn sm" data-apv="framework">How it’s built</button>
-      <button class="btn sm link" data-apv="reset">Start over</button></div></div>`;
-  }
-  function youCan() {
-    const p = ME();
-    if (isAdmin(p)) return `As ${p.role.toLowerCase()} you connect and disconnect apps, give the assistant tasks, and post what they bring in.`;
-    if (!Object.keys(DATA).some((k) => DATA[k].some(canSee))) {
-      return 'You can see which apps are connected and what their tasks do. What they share is outside your QuickBooks role, so their rows stay hidden from you.';
-    }
-    const can = ACTIONS.filter((a) => !a.never && covers(a.area)).map((a) => plural(a.what));
-    if (can.length) return `You can ask, set up watches, and set up tasks for ${listWords(can)} — what your QuickBooks role covers. Connecting an app is for a QuickBooks admin.`;
-    return 'You can ask about what your role can see and set up watches. Tasks that post need a QuickBooks role that can change things.';
-  }
-  function how() {
-    return `<details class="ap-how" id="apHow"${S.howOpen ? ' open' : ''}><summary>How it works <span class="ap-chev">›</span></summary><div class="ap-body">
-      <div class="ap-layers">
-        <div class="ap-layer"><div class="k">1 · Connect</div><div class="v">A QuickBooks admin links an app</div><p>Only its financial side is shared — never kitchens, locations or chats.</p></div>
-        <div class="ap-layer"><div class="k">2 · Task</div><div class="v">You give the assistant a task</div><p>Ask, Post, Keep in step, Watch, or a Routine of them.</p></div>
-        <div class="ap-layer"><div class="k">3 · Review</div><div class="v">A person posts every item</div><p>Nothing reaches QuickBooks until its owner posts it.</p></div>
-        <div class="ap-layer"><div class="k">4 · Record</div><div class="v">Everything is on the record</div><p>Where it came from, who posted it, and a link in QuickBooks.</p></div>
-      </div>
-      <div>What never changes: your <b>QuickBooks role</b> decides what you can see, set up and post — whoever sees Sales in QuickBooks sees an app’s sales, and nobody else does; large amounts need the amount typed back or a second approver; a task <b>never deletes</b> and <b>never posts the same thing twice</b>.</div>
-      <div class="strip info">${esc(youCan())}</div></div></details>`;
-  }
-  function appCard(key) {
-    const a = APPS[key]; const c = S.connected[key]; const n = S.tasks.filter((t) => t.app === key).length;
-    const rev = S.review.filter((i) => i.app === key && i.go).length; const al = S.alerts.filter((x) => x.app === key && !x.seen).length;
-    const counts = !c ? '' : `<div class="counts">${rev ? `<span class="pill qb">${rev} for review</span>` : ''}${al ? `<span class="pill no">${al} alert${al === 1 ? '' : 's'}</span>` : ''}<span class="pill">${n ? `${n} task${n === 1 ? '' : 's'}` : 'No tasks'}</span></div>`;
-    return `<button class="ap-acct" data-open="${key}"><div class="ap-mark ${a.mark}">${a.icon}</div>
-      <div><div class="name">${esc(a.name)}</div><div class="meta">${esc(a.what)}${c ? ` · connected by ${esc(c.by)}` : ''}</div></div>
-      ${c ? '<span class="ap-chev2">›</span>' : (isAdmin(ME()) ? '<span class="btn primary sm">Connect</span>' : '<span class="pill">Not connected</span>')}${counts}</button>`;
-  }
-  function home() {
-    const on = Object.keys(APPS).filter((k) => S.connected[k]); const off = Object.keys(APPS).filter((k) => !S.connected[k]);
-    const mine = mineToPost(); const alerts = alertsForMe(); const strips = [];
-    if (mine.length) strips.push(`<div class="strip warn"><div class="row"><div><b>${mine.length} item${mine.length === 1 ? ' is' : 's are'} ready for you to post</b>From your tasks. Nothing reaches QuickBooks until you post it.</div><button class="btn primary" data-open="${mine[0].app}" data-go="review">Review</button></div></div>`);
-    if (alerts.length) strips.push(`<div class="strip bad"><div class="row"><div><b>${alerts.length} alert${alerts.length === 1 ? '' : 's'} for you</b>${esc(alerts[0].text)}</div><button class="btn" data-open="${alerts[0].app}" data-go="alerts">Look</button></div></div>`);
-    if (!strips.length) strips.push('<div class="strip info"><b>All caught up</b>Your tasks run next at 7:00.</div>');
-    return `<div class="stack">${strips.join('')}</div>${how()}
-      <div class="glabel">Connected apps</div><div class="group">${on.map(appCard).join('') || '<div class="msg">No apps connected yet.</div>'}</div>
-      ${off.length ? `<div class="glabel">Add an app</div><div class="group">${off.map(appCard).join('')}</div>
-        <p class="gnote">${isAdmin(ME()) ? 'Connecting shares only the app’s financial side with QuickBooks. You see exactly what before you agree.' : 'Only a QuickBooks primary or company admin connects apps — QuickBooks’ own rule.'}</p>` : ''}`;
-  }
-  function appScreen(key) {
-    const a = APPS[key]; const c = S.connected[key];
-    const rev = S.review.filter((i) => i.app === key && i.go).length; const al = S.alerts.filter((x) => x.app === key && !x.seen).length;
-    const subs = [['tasks', 'Tasks'], ['review', 'For review', rev], ['alerts', 'Alerts', al], ['posted', 'Posted'], ...(key === 'attendance' ? [['people', 'People']] : []), ['shares', 'What’s shared']];
-    if (!subs.some((s) => s[0] === S.sub)) S.sub = 'tasks';
-    const body = { tasks: tasksTab, review: reviewTab, alerts: alertsTab, posted: postedTab, people: peopleTab, shares: sharesTab }[S.sub](key);
-    return `<button class="ap-back" data-home>‹ Apps</button>
-      <div class="ap-apphead"><div class="ap-mark big ${a.mark}">${a.icon}</div><div><h2>${esc(a.name)}</h2><div class="meta">${esc(a.what)} · connected by ${esc(c.by)} · ${esc(c.on)}</div></div></div>
-      <p class="ap-line num"><b>${S.posted.filter((p) => p.app === key).length}</b> posted · <b>${S.review.filter((i) => i.app === key && i.go).length}</b> ready for review · <b>${S.alerts.filter((x) => x.app === key).length}</b> alert${S.alerts.filter((x) => x.app === key).length === 1 ? '' : 's'}</p>
-      <div class="seg small">${subs.map(([k, l, n]) => `<button data-sub="${k}" aria-selected="${S.sub === k}">${l}${n ? `<span class="badge${k === 'alerts' ? ' warn' : ''}">${n}</span>` : ''}</button>`).join('')}</div>
-      ${body}`;
-  }
-  function tasksTab(key) {
-    const list = S.tasks.filter((t) => t.app === key); const ex = EXAMPLES[key];
-    const cards = TYPES.filter((t) => ex[t.id]).map((t) => {
-      const no = cannot(key, t.id);
-      return `<button class="ap-type" data-newtask="${t.id}" data-app="${key}"${no ? ' disabled' : ''}><span class="top"><b>${esc(t.name)}</b><span class="ap-kind ${t.mode}">${t.mode === 'mixed' ? 'read + post' : t.mode === 'read' ? 'read only' : 'posts'}</span></span>
-        <span class="d">${esc(t.d)}</span><span class="eg">“${esc(ex[t.id])}”</span>${no ? `<span class="d">${esc(no)}</span>` : ''}</button>`;
-    }).join('');
-    return `<div class="stack">${list.map(taskCard).join('') || `<div class="strip info"><b>Connected — nothing happens yet</b>The assistant can already answer questions from ${esc(APPS[key].name)}. To bring anything into QuickBooks, give it a task below; what a task brings in waits for its owner to post.</div>`}</div>
-      <div class="glabel">Give the assistant a task</div><div class="ap-types">${cards}</div>`;
-  }
-  function taskCard(t) {
-    const me = ME(); const owner = t.owner === me.who; const ty = typ(t.type); let detail = '';
-    if (t.type === 'post' || t.type === 'sync') {
-      detail = `<div><dt>Filled in as</dt><dd>${howWords(t)}</dd></div>
-        <div><dt>Posted by</dt><dd>${esc(t.owner)} ${t.type === 'sync' ? 'approves' : 'reviews and posts'} each item${owner ? ' — that’s you' : ''}</dd></div>`;
-    } else if (t.type === 'watch') {
-      detail = `<div><dt>Tells</dt><dd>${esc(t.tell.who.join(', '))} · ${esc(t.tell.how.join(' and '))} · ${esc(t.tell.often.toLowerCase())}</dd></div>
-        <div><dt>Changes</dt><dd>Nothing — a Watch only reads</dd></div>`;
-    }
-    const waiting = t.type === 'routine' && t.waiting
-      ? `<div class="strip warn">Stopped at step ${t.waiting}: ${readyFor(t)} item${readyFor(t) === 1 ? '' : 's'} still waiting for ${esc(t.owner)} to post. It carries on by itself once they are done.</div>` : '';
-    return `<div class="ap-task"><div class="top"><div class="main"><b>${esc(t.name)}</b></div><span class="ap-kind ${ty.mode}">${esc(ty.name)}</span><span class="pill ${t.on ? 'yes' : 'wait'}">${t.on ? 'On' : 'Off'}</span></div>
-      <div class="ap-sentence">${sentence(t)}</div>${t.type === 'routine' ? `<ol class="ap-timeline">${t.steps.map(stepLi).join('')}</ol>` : ''}${waiting}
-      <dl>${detail}<div><dt>Last run</dt><dd>${esc(t.last || 'Not run yet')}</dd></div></dl>
-      <div class="foot"><span class="meta">${owner ? 'You own this task' : `Owned by ${esc(t.owner)}`} · run by QuickBooks’ assistant</span>
-        ${owner ? `<button class="btn sm" data-run="${t.id}">Run now</button><button class="btn sm" data-edit="${t.id}">Edit</button><button class="btn sm" data-toggle="${t.id}">${t.on ? 'Turn off' : 'Turn on'}</button>` : ''}
-        ${!owner && isAdmin(me) ? `<button class="btn sm" data-takeover="${t.id}">Take over</button>` : ''}</div></div>`;
-  }
-  function stepLi(s, i) {
-    if (s.kind === 'task') {
-      const t = task(s.id); const ty = typ(t.type);
-      return `<li><span class="n">${i + 1}</span><span class="t">${esc(ty.name)}: ${esc(t.name)}<small>${t.type === 'watch' ? 'Checks, and alerts if something’s off' : 'Brings items in for review'}</small></span><span class="ap-kind ${ty.mode}">${esc(ty.name)}</span></li>`;
-    }
-    if (s.kind === 'wait') return `<li><span class="n stop">${PAUSE}</span><span class="t">Wait for the owner to post what came in<small>The routine stops here until everything is posted or excluded.</small></span><span class="ap-kind write">You</span></li>`;
-    return `<li><span class="n">${i + 1}</span><span class="t">Send a summary<small>What was posted, what was excluded, and any alerts — to the owner.</small></span><span class="ap-kind read">read only</span></li>`;
-  }
-  function reviewTab(key) {
-    const items = S.review.filter((i) => i.app === key);
-    if (!items.length) return '<div class="group"><div class="msg">All caught up.</div></div><p class="gnote">Tasks bring items here when they run.</p>';
-    const byTask = {}; items.forEach((i) => { (byTask[i.task] = byTask[i.task] || []).push(i); });
-    return Object.keys(byTask).map((tid) => {
-      const t = task(tid); const a = act(t.action); const list = byTask[tid];
-      if (!canSee(taskData(t))) {
-        return `<div class="group"><div class="msg">${list.length} item${list.length === 1 ? '' : 's'} from “${esc(t.name)}” wait for ${esc(t.owner)}. They come from ${esc(taskData(t).title.toLowerCase())}, which is outside your QuickBooks role (${esc(areaWord(taskData(t).area))}).</div></div>`;
-      }
-      const mayPost = t.owner === ME().who && covers(a.area);
-      const picked = list.filter((i) => i.go && S.picked[i.id] !== false);
-      const rows = list.map((i) => `<tr class="${i.go ? '' : 'held'}"><td class="x">${i.go && mayPost ? `<input class="tick" type="checkbox" data-pick="${esc(i.id)}"${S.picked[i.id] !== false ? ' checked' : ''} aria-label="Post ${esc(i.title)}">` : ''}</td>
-        <td><div class="desc">${esc(i.title)}</div><div class="sm">${esc(i.detail)}</div>${i.go ? '' : `<div class="ap-why">${esc(i.why)}</div>`}</td>
-        <td>${esc(i.label)}</td><td class="n">${i.go && mayPost ? `<button class="btn link" data-exclude="${esc(i.id)}">Exclude</button>` : ''}</td></tr>`).join('');
-      const why = mayPost ? '' : `<div class="strip info" style="margin-bottom:10px">${covers(a.area) ? `These wait for ${esc(t.owner)}, who owns this task.` : `Your QuickBooks role doesn’t cover ${esc(areaWord(a.area).toLowerCase())}, so you can look but not post.`}</div>`;
-      return `<div class="ap-feedbar"><span class="ap-note">${esc(typ(t.type).name)} task “${esc(t.name)}” · owner ${esc(t.owner)}</span><span class="grow"></span>
-        ${mayPost ? `<button class="btn primary" data-post="${t.id}"${picked.length ? '' : ' disabled'}>${t.type === 'sync' ? 'Approve' : 'Post'} ${picked.length}</button>` : ''}</div>${why}
-        <div class="group scroll"><table class="ap-feed"><thead><tr><th></th><th>From ${esc(APPS[key].name)}</th><th>In QuickBooks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
-    }).join('<div style="height:14px"></div>') + '<p class="gnote">Rows that aren’t ready stay here and say why; they come through on a later run once they are. Nothing is ever posted twice.</p>';
-  }
-  function alertsTab(key) {
-    const list = S.alerts.filter((x) => x.app === key);
-    return `<div class="group">${list.map((x) => !sees(ME(), x.area) ? `<div class="item"><div class="main"><div class="meta">An alert from “${esc(task(x.task).name)}”, about data outside your QuickBooks role.</div></div></div>` : `<div class="item"><div class="main"><div class="name">${esc(x.text)}</div>
-      <div class="meta">Watch “${esc(task(x.task).name)}” · ${esc(x.when)} · told ${esc(task(x.task).tell.who.join(', '))}</div></div>
-      <button class="btn sm" data-askwhy="${esc(x.id)}">Ask why</button>${x.seen ? '' : `<button class="btn sm" data-seen="${esc(x.id)}">Done</button>`}</div>`).join('') || '<div class="msg">No alerts.</div>'}</div>
-      <p class="gnote">An alert never changes anything. “Ask why” takes it to Ask, where the assistant looks in both places and explains.</p>`;
-  }
-  function postedTab(key) {
-    const list = S.posted.filter((p) => p.app === key); const gone = S.excluded.filter((x) => x.app === key);
-    return `<div class="group">${list.map((p) => !sees(ME(), p.area) ? `<div class="item"><div class="main"><div class="name">${esc(p.ref)}</div><div class="meta">Outside your QuickBooks role (${esc(areaWord(p.area))}) · posted by ${esc(p.by)} on ${esc(p.day)}</div></div></div>` : `<div class="item"><div class="main"><div class="name">${esc(p.who)}</div><div class="meta">${esc(p.text)}</div>
-      <div class="meta">${esc(p.ref)} · task “${esc(p.task)}” · posted by ${esc(p.by)} on ${esc(p.day)} · verified</div></div>
-      ${p.undo ? '<span class="pill wait">Undo asked</span>' : `<button class="btn sm" data-undo="${esc(p.key)}">Undo</button>`}</div>`).join('') || '<div class="msg">Nothing posted yet.</div>'}</div>
-      <p class="gnote">“Verified” means Eesa read it back from QuickBooks after posting. Undo asks an approver to delete it there — a task never deletes.</p>
-      <div class="glabel">Excluded</div><div class="group">${gone.filter((x) => sees(ME(), x.area)).map((x) => `<div class="item"><div class="main"><div class="name">${esc(x.title)}</div><div class="meta">${esc(x.detail)}</div>
-      <div class="meta">Excluded by ${esc(x.by)}${x.why ? ` — “${esc(x.why)}”` : ''}</div></div><button class="btn sm" data-bringback="${esc(x.key)}">Bring back</button></div>`).join('') || '<div class="msg">Nothing excluded.</div>'}</div>`;
-  }
-  function peopleTab() {
-    return `<div class="group">${DATA.attendance[0].rows.map((p) => {
-      const cur = S.matches[p.person]; const sug = !cur && QB.employee.indexOf(p.person) !== -1 ? p.person : '';
-      return `<div class="item" style="flex-wrap:wrap"><div class="main"><div class="name">${esc(p.person)}</div><div class="meta">${esc(p.email)}</div></div>
-        ${cur ? `<span class="pill yes">${esc(cur)}</span>` : sug ? `<span class="pill qb">Suggested: ${esc(sug)}</span>` : '<span class="pill wait">Not found in QuickBooks</span>'}
-        ${covers('time') ? (sug ? `<button class="btn primary sm" data-confirm="${esc(p.person)}">Confirm</button>`
-          : `<select class="pick" data-match="${esc(p.person)}"><option value="">${cur ? 'Change…' : 'Choose…'}</option>${QB.employee.map((e) => `<option>${esc(e)}</option>`).join('')}<option value="__add">Not in QuickBooks — ask to add</option></select>`) : ''}</div>`;
-    }).join('')}</div><p class="gnote">Each person is matched to their QuickBooks employee once, by a person. Eesa suggests; nothing is matched until someone confirms.</p>`;
-  }
-  function sampleTable(ds) {
-    const n = (c) => /money|number/.test(c[2]) ? ' class="n"' : '';
-    return `<table class="ap-feed sample"><thead><tr>${ds.cols.map((c) => `<th${n(c)}>${esc(c[1])}</th>`).join('')}</tr></thead>
-      <tbody>${ds.rows.slice(0, 5).map((r) => `<tr>${ds.cols.map((c) => `<td${n(c)}>${esc(shown(r[c[0]], c[2]) || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  }
-  function sharesTab(key) {
-    return `<div class="glabel" style="margin-top:0">Shared with QuickBooks — read only</div><div class="stack">${DATA[key].map((ds) => `<div class="group"><div class="item"><div class="main"><div class="name">${esc(ds.title)}</div><div class="meta">${esc(ds.note)}</div></div>
-      <span class="pill ${canSee(ds) ? 'yes' : ''}">${canSee(ds) ? 'You can see this' : 'Outside your role'}</span></div>
-      ${canSee(ds) ? `<div class="scroll" style="padding:0 6px 8px">${sampleTable(ds)}</div>` : `<div class="msg" style="padding-top:0">Seen by people whose QuickBooks role covers ${esc(areaWord(ds.area).toLowerCase())}.</div>`}</div>`).join('')}</div>
-      <div class="glabel">Not shared</div><div class="group">${APPS[key].notShared.map((n) => `<div class="item"><div class="main"><div class="name">${esc(n)}</div></div><span class="pill">Stays in ${esc(APPS[key].name)}</span></div>`).join('')}</div>
-      <p class="gnote">This is the financial link between ${esc(APPS[key].name)} and QuickBooks. The assistant reads through it; it can’t change ${esc(APPS[key].name)}.</p>
-      ${isAdmin(ME()) ? `<div style="margin-top:18px"><button class="btn quiet" data-disconnect="${key}">Disconnect ${esc(APPS[key].name)}</button></div>` : ''}`;
-  }
-
-  // ── builders: one frame, steps chosen by the kind of task ─────────────
-  function builder() {
-    const b = S.b; const names = STEPS[b.type];
-    const ds = b.source && dataset(b.app, b.source); const a = b.action && act(b.action);
-    const can = b.type === 'routine' ? [b.steps.length > 0, true, true]
-      : b.type === 'watch' ? [!!ds, !!b.cond, b.tell.who.length > 0, true] : [!!ds, !!a, !!(a && ds), true];
-    const bar = `<div class="ap-steps" style="--n:${names.length}">${names.map((n, i) => `<button data-step="${i}"${i === b.step ? ' aria-current="step"' : ''} class="${i < b.step ? 'done' : ''}"${i && !can[i - 1] ? ' disabled' : ''}><span class="k">${i + 1}</span><span class="v">${esc(n)}</span></button>`).join('')}</div>`;
-    const body = b.type === 'routine' ? routineStep(b) : b.type === 'watch' ? watchStep(b, ds) : postStep(b, ds, a);
-    const last = b.step === names.length - 1;
-    return `<button class="ap-back" data-cancelbuild>‹ ${esc(APPS[b.app].name)}</button>
-      <h2>${b.editing ? 'Edit' : 'New'} ${esc(typ(b.type).name)} task</h2><p class="sub">${esc(typ(b.type).d)}</p>${bar}${body}
-      <div class="ap-buildfoot"><span class="meta">Owner: ${esc(ME().who)} · nothing changes while you set this up</span>${b.step ? '<button class="btn" data-stepback>Back</button>' : ''}
-        ${last ? '<button class="btn primary" data-save>Save task</button>' : `<button class="btn primary" data-next${can[b.step] ? '' : ' disabled'}>Continue</button>`}</div>`;
-  }
-  function dsChoices(b) {
-    return `<div class="ap-choices">${startsFrom(b.app, b.type).map((d) => {
-      const acts = b.type === 'watch' ? [] : fitting(d, b.type);
-      const no = !canSee(d) ? `Outside your QuickBooks role — seen by people who have ${areaWord(d.area).toLowerCase()}.`
-        : acts.length && !acts.some((a) => covers(a.area)) ? `This becomes ${listWords(acts.map((a) => plural(a.what)))} in QuickBooks, which your role can’t change.` : '';
-      return `<button class="ap-choice" role="radio" aria-checked="${b.source === d.id}" data-pickds="${d.id}"${no ? ' disabled' : ''}><span class="dot"></span><b>${esc(d.title)}</b>
-        <span class="pill">${d.rows.length} yesterday</span><span class="d">${esc(no || d.note)}</span></button>`;
-    }).join('')}</div>`;
-  }
-  function postStep(b, ds, a) {
-    if (b.step === 0) {
-      return `<h2>What from ${esc(APPS[b.app].name)}?</h2><p class="sub">Only its financial side is here. You see real rows as you go.</p><div style="margin-top:12px">${dsChoices(b)}</div>
-        ${ds ? `<div class="glabel">Only when</div><div class="group ap-conds">${b.conds.map((c, i) => condRow(ds, c, i)).join('')}<div><button class="btn link" data-addcond>+ Add a condition</button></div></div>
-          <p class="gnote">Rows that don’t meet these wait in For review and say why — like a day not approved yet.</p>
-          <div class="glabel">What it looks like</div><div class="group scroll">${sampleTable(ds)}</div>` : ''}`;
-    }
-    if (b.step === 1) {
-      const choice = (x) => {
-        const ok = !x.never && covers(x.area);
-        return `<button class="ap-choice" role="radio" aria-checked="${b.action === x.id}" data-pickact="${x.id}"${ok ? '' : ' disabled'}><span class="dot"></span>
-          <b>${esc(x.verb)} ${x.never ? '' : 'a '}${esc(x.what)}</b>${x.area ? `<span class="pill">${esc(areaWord(x.area))}</span>` : '<span class="pill no">Never</span>'}
-          <span class="d">${esc(x.never || (ok ? x.note : `Your QuickBooks role doesn’t cover ${areaWord(x.area).toLowerCase()}.`))}</span></button>`;
-      };
-      const fit = fitting(ds, b.type);
-      const rest = ACTIONS.filter((x) => !x.never && (b.type === 'sync') === !!x.sync && fit.indexOf(x) === -1);
-      const openRest = rest.some((x) => x.id === b.action);
-      return `<h2>${b.type === 'sync' ? 'Which QuickBooks list?' : 'What should happen in QuickBooks?'}</h2><p class="sub">What QuickBooks accepts. What you can pick follows your QuickBooks role.</p>
-        <div class="glabel">Fits ${esc(ds.short)}</div><div class="ap-choices">${fit.map(choice).join('')}</div>
-        ${rest.length ? `<details class="ap-how" style="box-shadow:none;background:transparent"${openRest ? ' open' : ''}><summary style="padding:13px 4px">Other things QuickBooks accepts <span class="ap-chev">›</span></summary><div class="ap-choices">${rest.map(choice).join('')}</div></details>` : ''}
-        <div class="ap-choices" style="margin-top:12px">${choice(act('delete'))}</div>
-        ${a && a.sync ? `<div class="glabel">Finding them in QuickBooks</div><div class="group ap-conds">
-          <div class="ap-cond">Match on email first, then on the display name. If they’re not in QuickBooks, they come to For review as “Add”.</div></div>` : ''}`;
-    }
-    if (b.step === 2) {
-      const first = ds.rows.filter((r) => !passes(b, r, ds))[0] || ds.rows[0];
-      return `<h2>${b.type === 'sync' ? 'Which fields to keep in step' : 'How each QuickBooks field is filled'}</h2>
-        <p class="sub">Every ${esc(a.what)} field in QuickBooks’ own words. Suggestions are filled in — change any of them. <span style="color:var(--out)">*</span> QuickBooks needs it.</p>
-        <div class="group" style="margin-top:12px">${a.fields.map((f) => mapRow(ds, a, f, first)).join('')}</div>
-        <div class="glabel">QuickBooks would get — for ${esc(rowTitle(first))}</div>${docCard(first)}`;
-    }
-    const t = draft();
-    const rows = ds.rows.map((row) => {
-      const v = verdict(t, row); const sc = b.type === 'sync' ? syncChange(t, row) : null;
-      return `<tr class="${v.go ? '' : 'held'}"><td class="desc">${esc(rowTitle(row))}</td><td>${esc(sc ? sc.text : summaryOf(t, row))}</td>
-        <td><span class="pill ${v.go ? 'yes' : 'wait'}">${esc(v.go ? (sc ? sc.kind : 'Ready') : v.why)}</span></td></tr>`;
-    }).join('');
-    return `<h2>Check it, then save</h2><p class="sub">What this task would bring in from yesterday. Nothing is posted from here.</p>${nameWhen(b)}
-      <div class="glabel">From yesterday</div><div class="group scroll"><table class="ap-feed"><thead><tr><th>Row</th><th>In QuickBooks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="glabel">Posting</div><div class="group">
-        <div class="item"><div class="main"><div class="name">${esc(ME().who)} ${b.type === 'sync' ? 'approves' : 'posts'} each item</div><div class="meta">What the task brings in waits in For review until you do.</div></div><span class="pill qb">You</span></div>
-        <div class="item"><div class="main"><div class="name">Large amounts</div><div class="meta">The Approvals rules still apply: over $10,000 you type the amount back; over $50,000 a second approver signs.</div></div></div>
-        <div class="item"><div class="main"><div class="name">Never</div><div class="meta">Deletes, posts a row twice, or posts a row that doesn’t meet the conditions.</div></div></div></div>`;
-  }
-  function watchStep(b, ds) {
-    if (b.step === 0) {
-      return `<h2>What should the assistant watch?</h2><p class="sub">A Watch only reads. It never changes anything in ${esc(APPS[b.app].name)} or QuickBooks.</p><div style="margin-top:12px">${dsChoices(b)}</div>
-        ${ds && COMPARE[ds.id] ? `<div class="glabel">Compare with your books</div><div class="group ap-checks"><label><input type="checkbox" class="tick" id="apCmp"${b.compare ? ' checked' : ''}> ${esc(COMPARE[ds.id].label)}</label></div>` : ''}
-        ${ds ? `<div class="glabel">Yesterday</div><div class="group scroll">${sampleTable(ds)}</div>` : ''}`;
-    }
-    if (b.step === 1) {
-      const opts = [];
-      if (b.compare && COMPARE[b.source]) opts.push(['differs', 'They differ by more than an amount', true]);
-      if (ds.cols.some((c) => c[2] === 'money')) opts.push(['over', 'An amount is over a limit', true]);
-      if (ds.cols.some((c) => c[0] === 'approval')) opts.push(['pending', 'A day is still waiting for approval', false]);
-      const cur = opts.filter((o) => b.cond && b.cond.kind === o[0])[0];
-      return `<h2>Alert when…</h2><p class="sub">Pick what counts as “something’s off”.</p>
-        <div class="ap-choices" style="margin-top:12px">${opts.map(([k, l]) => `<button class="ap-choice" role="radio" aria-checked="${!!(b.cond && b.cond.kind === k)}" data-pickcond="${k}"><span class="dot"></span><b>${esc(l)}</b><span></span></button>`).join('')}</div>
-        ${cur && cur[2] ? `<div class="group ap-conds" style="margin-top:12px"><div class="ap-cond"><label for="apAmt">${cur[0] === 'differs' ? 'By more than' : 'Over'} $</label><input class="pick" id="apAmt" type="number" min="0" step="1" value="${esc(b.cond.amount)}" style="width:120px"></div></div>` : ''}`;
-    }
-    if (b.step === 2) {
-      return `<h2>Who to tell, and how</h2><p class="sub">An alert reaches people; it doesn’t change anything.</p>
-        <div class="glabel">Tell</div><div class="group ap-checks">${PEOPLE.map((p) => {
-          const ok = sees(p, ds.area);
-          return `<label${ok ? '' : ' style="color:var(--label3)"'}><input type="checkbox" class="tick" data-tellwho="${esc(p.who)}"${b.tell.who.indexOf(p.who) !== -1 ? ' checked' : ''}${ok ? '' : ' disabled'}> ${esc(p.who)}${p.key === S.person ? ' (you)' : ''}${ok ? '' : ` — can’t see ${esc(areaWord(ds.area).toLowerCase())}`}</label>`;
-        }).join('')}</div>
-        <p class="gnote">Only people whose QuickBooks role covers ${esc(areaWord(ds.area).toLowerCase())} can be told: an alert shows the figures.</p>
-        <div class="glabel">By</div><div class="group ap-checks">${['In the QuickBooks app', 'Email', 'WhatsApp'].map((h) => `<label><input type="checkbox" class="tick" data-tellhow="${h}"${b.tell.how.indexOf(h) !== -1 ? ' checked' : ''}> ${h}</label>`).join('')}</div>
-        <div class="glabel">How often</div><div class="group ap-conds"><div class="ap-cond"><select class="pick" id="apOften">${['As it happens', 'One summary a day, at 8:00'].map((o) => `<option${b.tell.often === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div></div>`;
-    }
-    const hits = watchHits(draft());
-    return `<h2>Check it, then save</h2><p class="sub">Run against yesterday. Nothing is changed and nobody is told from here.</p>${nameWhen(b)}
-      <div class="glabel">On yesterday it would say</div>
-      ${hits.length ? `<div class="stack">${hits.map((h) => `<div class="strip bad"><b>Alert</b>${esc(h)}</div>`).join('')}</div>` : '<div class="strip ok"><b>All clear</b>Nothing was off yesterday.</div>'}`;
-  }
-  function routineStep(b) {
-    const mine = S.tasks.filter((t) => t.app === b.app && t.type !== 'routine' && (t.owner === ME().who || t.type === 'watch'));
-    if (b.step === 0) {
-      const lis = b.steps.map((s, i) => stepLi(s, i).replace('</li>', `<span class="ctl"><button class="btn link" data-stepup="${i}"${i ? '' : ' disabled'}>Move up</button> <button class="btn link" data-stepdel="${i}">Remove</button></span></li>`)).join('');
-      return `<h2>Steps, in order</h2><p class="sub">Use tasks you already have, and stop where a person should check before the next step.</p>
-        <div class="group" style="margin-top:12px"><ol class="ap-timeline">${lis || '<li><span></span><span class="t" style="color:var(--label2)">No steps yet.</span></li>'}</ol></div>
-        <div class="glabel">Add a step</div><div class="stack">
-          ${mine.map((t) => `<button class="btn" style="text-align:left" data-addstep="task:${t.id}">+ ${esc(typ(t.type).name)}: ${esc(t.name)}</button>`).join('')}
-          <button class="btn" style="text-align:left" data-addstep="wait">+ Wait for me to post what came in</button>
-          <button class="btn" style="text-align:left" data-addstep="summary">+ Send me a summary</button></div>`;
-    }
-    if (b.step === 1) {
-      return `<h2>When does it run?</h2><div class="group ap-conds" style="margin-top:12px"><div class="ap-cond"><select class="pick" id="apWhen">${['Last day of the month at 6:00 PM', 'Every Friday at 4:00 PM', 'Every morning at 7:00', 'Only when I run it'].map((w) => `<option${b.when === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div></div>
-        <p class="gnote">The assistant runs each step as you. At a “wait” it stops until what came in is posted or excluded, then carries on by itself.</p>`;
-    }
-    return `<h2>Check it, then save</h2>${nameWhen(b, true)}<div class="glabel">The plan</div><div class="group"><ol class="ap-timeline">${b.steps.map(stepLi).join('')}</ol></div>
-      <p class="gnote">A routine posts nothing on its own: its Post steps bring items to For review, and they wait for you like any other.</p>`;
-  }
-  function nameWhen(b, noWhen) {
-    return `<div class="group" style="margin-top:12px"><div class="ap-conds"><div class="ap-cond"><label for="apName">Name</label><input class="pick" id="apName" value="${esc(b.named ? b.name : autoName(b))}" style="flex:1;min-width:180px"></div>
-      ${noWhen ? '' : `<div class="ap-cond"><label for="apWhen">Runs</label><select class="pick" id="apWhen">${['Every morning at 7:00', 'Weekdays at 7:00', 'Every night at 11:00', 'Every Monday, for last week', 'Only when I run it'].map((w) => `<option${b.when === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>`}</div></div>`;
-  }
-  function condRow(ds, c, i) {
-    const vals = ds.rows.map((r) => String(r[c[0]] == null ? '' : r[c[0]])).filter((v, x, all) => v && all.indexOf(v) === x);
-    return `<div class="ap-cond"><select class="pick" data-cond="${i}" data-part="0">${ds.cols.map((x) => `<option value="${x[0]}"${x[0] === c[0] ? ' selected' : ''}>${esc(x[1])}</option>`).join('')}</select>
-      <select class="pick" data-cond="${i}" data-part="1">${['is', 'is not'].map((o) => `<option${o === c[1] ? ' selected' : ''}>${o}</option>`).join('')}</select>
-      <select class="pick" data-cond="${i}" data-part="2">${vals.map((x) => `<option${x === c[2] ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>
-      <button class="btn link" data-delcond="${i}">Remove</button></div>`;
-  }
-  // A table someone already filled in for this column, in another task.
-  function remembered(col) {
-    for (const t of S.tasks) for (const k in (t.map || {})) { const m = t.map[k]; if (m.how === 'table' && m.col === col) return Object.assign({}, m.table); }
-    return {};
-  }
-  // First guesses for each field. Every one is shown and can be changed.
-  function suggest(ds, a) {
-    const map = {}; let tableUsed = false;
-    const who = ds.cols.filter((c) => c[2] === 'email')[0] || ds.cols.filter((c) => c[2] === 'name')[0];
-    const choice = ds.cols.filter((c) => c[2] === 'choice')[0];
-    a.fields.forEach(([k, label, kind, req, hint]) => {
-      const same = ds.cols.filter((c) => c[0] === k || c[1].toLowerCase() === label.toLowerCase())[0];
-      const typed = ds.cols.filter((c) => c[2] === kind)[0];
-      if (['employee', 'customer', 'vendor'].indexOf(kind) !== -1) map[k] = who ? { how: 'match', col: who[0] } : { how: 'fixed', value: hint || QB[kind][0] };
-      else if (kind === 'account' && choice && !tableUsed) { tableUsed = true; map[k] = { how: 'table', col: choice[0], table: remembered(choice[0]) }; }
-      else if (kind === 'account' || kind === 'item') map[k] = { how: 'fixed', value: hint || QB[kind][0] };
-      else if (kind === 'yesno') map[k] = { how: 'fixed', value: 'No' };
-      else if (same) map[k] = { how: 'col', col: same[0] };
-      else if (typed && kind !== 'text') map[k] = { how: 'col', col: typed[0] };
-      else if (kind === 'text') {
-        const times = ds.cols.filter((c) => c[2] === 'time'); const reason = colOf(ds, 'reason'); const nm = ds.cols.filter((c) => c[2] === 'name')[0];
-        map[k] = times.length >= 2 ? { how: 'words', text: `${APPS[S.b.app].name} · {${times[0][1]}} – {${times[1][1]}}` }
-          : reason ? { how: 'col', col: reason[0] } : (req && nm) ? { how: 'col', col: nm[0] } : { how: 'empty' };
-      } else map[k] = { how: 'empty' };
-    });
-    return map;
-  }
-  function mapRow(ds, a, f, row) {
-    const [k, label, kind, req] = f; const m = S.b.map[k] || { how: 'empty' }; const opts = [];
-    const fits = (c) => kind === 'text' || c[2] === kind || (['money', 'number'].indexOf(kind) !== -1 && ['money', 'number'].indexOf(c[2]) !== -1);
-    ds.cols.filter(fits).forEach((c) => opts.push([`col:${c[0]}`, `${c[1]}  (e.g. ${shown(row[c[0]], c[2]) || '—'})`]));
-    if (['employee', 'customer', 'vendor'].indexOf(kind) !== -1) ds.cols.filter((c) => c[2] === 'email' || c[2] === 'name').forEach((c) => opts.push([`match:${c[0]}`, `Matched ${kind}, by ${c[1].toLowerCase()}`]));
-    if (['account', 'item', 'customer', 'text'].indexOf(kind) !== -1) ds.cols.filter((c) => c[2] === 'choice').forEach((c) => opts.push([`table:${c[0]}`, `Depends on ${c[1].toLowerCase()} — a table you fill in`]));
-    opts.push(['fixed', QB[kind] ? `Always the same ${kind}` : 'Always the same value']);
-    if (kind === 'text') opts.push(['words', 'Write it, using columns']);
-    if (!req) opts.push(['empty', a.sync ? 'Don’t change it in QuickBooks' : 'Leave empty']);
-    const cur = ['col', 'match', 'table'].indexOf(m.how) !== -1 ? `${m.how}:${m.col}` : m.how;
-    let extra = '';
-    if (m.how === 'fixed') {
-      extra = QB[kind] ? `<select class="pick" data-fixed="${k}">${QB[kind].map((x) => `<option${x === m.value ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`
-        : kind === 'yesno' ? `<select class="pick" data-fixed="${k}">${['No', 'Yes'].map((x) => `<option${x === m.value ? ' selected' : ''}>${x}</option>`).join('')}</select>`
-        : `<input class="pick" data-fixed="${k}" value="${esc(m.value || '')}" aria-label="${esc(label)}">`;
-    }
-    if (m.how === 'words') extra = `<input class="pick" data-words="${k}" value="${esc(m.text || '')}" aria-label="${esc(label)}"><span class="ap-eg">Put a column in braces: ${ds.cols.slice(0, 4).map((c) => `{${esc(c[1])}}`).join(' ')}</span>`;
-    if (m.how === 'table') {
-      const vals = ds.rows.map((r) => r[m.col]).filter((v, x, all) => all.indexOf(v) === x);
-      extra = `<div class="ap-vtable">${vals.map((v) => `<span>${esc(v)} →</span><select class="pick" data-tablek="${k}" data-tablev="${esc(v)}"><option value="">Choose…</option>${(QB[kind] || []).map((x) => `<option${(m.table || {})[v] === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`).join('')}</div>`;
-    }
-    if (m.how === 'match') extra = `<span class="ap-eg">Uses <b>People</b>: each one is matched to a QuickBooks ${kind} once, by a person.</span>`;
-    const got = fill(draft(), row, ds).out.filter((o) => o[0] === k)[0];
-    return `<div class="ap-maprow"><div class="fld">${esc(label)}${req ? '<span class="req">*</span>' : ''}<span class="t">${esc(kind === 'yesno' ? 'yes / no' : kind)}</span></div>
-      <div class="how2"><select class="pick" data-how="${k}" aria-label="How ${esc(label)} is filled">${opts.map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>${extra}
-      <span class="ap-eg">Gives: <b>${esc(got && got[2] !== '' ? got[2] : '—')}</b></span></div></div>`;
-  }
-  function draft() { return Object.assign({}, S.b); }
-  function docCard(row) {
-    const t = draft(); const ds = dataset(t.app, t.source); const a = act(t.action); const f = fill(t, row, ds);
-    return `<div class="ap-doc"><div class="dh"><span>${esc(a.sync ? `${a.what} (add or update)` : `New ${a.what}`)}</span><span>Preview · not posted</span></div>
-      ${f.out.map(([, l, v, req]) => `<div class="dr${req && v === '' ? ' missing' : ''}"><span>${esc(l)}</span><span>${esc(v === '' ? (req ? 'Needed' : '—') : v)}</span></div>`).join('')}</div>
-      ${f.missing ? `<p class="gnote" style="color:var(--warn)">${esc(f.missing)} — until then, this row waits in For review.</p>` : ''}`;
-  }
-
-  // ── dialogs: the app's own, so the moment money moves looks the same ─
-  function connectDialog(key) {
-    const a = APPS[key];
-    return dialog({
-      title: `Connect ${a.name} to QuickBooks?`, sub: 'Only its financial side is shared. You can disconnect it any time.', ok: 'Connect',
-      body: `<div class="ap-h3">QuickBooks will be able to read</div><div class="ap-list">${DATA[key].map((d) => `<div class="ap-li"><span class="ic yes">✓</span><div>${esc(d.title)}<small>${esc(d.note)}</small></div></div>`).join('')}</div>
-        <div class="ap-h3">Not shared</div><div class="ap-list">${a.notShared.map((n) => `<div class="ap-li"><span class="ic no">✕</span><div>${esc(n)}</div></div>`).join('')}</div>
-        <div class="ap-h3">And QuickBooks won’t</div><div class="ap-list"><div class="ap-li"><span class="ic no">✕</span><div>Change anything in ${esc(a.name)}</div></div>
-          <div class="ap-li"><span class="ic no">✕</span><div>Post anything until someone gives the assistant a task and posts what it brings in</div></div>
-          <div class="ap-li"><span class="ic no">✕</span><div>Show anyone more than their own QuickBooks role allows</div></div></div>
-        <div class="hint">Connecting as ${esc(ME().who)} · ${esc(ME().role)}. Preview: nothing is connected.</div>`,
-      submit: () => Promise.resolve(),
-    }).then((ok) => {
-      if (!ok) return;
-      S.connected[key] = { by: ME().who, on: dayWord(0) }; S.screen = { name: 'app', app: key }; S.sub = 'tasks';
-      render(); say(`${a.name} connected — its financial side, read only`);
-    });
-  }
-  function postDialog(tid) {
-    const t = task(tid); const a = act(t.action); const items = S.review.filter((i) => i.task === tid && i.go && S.picked[i.id] !== false);
-    const verb = t.type === 'sync' ? 'Approve' : 'Post';
-    return dialog({
-      title: `${verb} ${items.length} ${items.length === 1 ? a.what : plural(a.what)}?`,
-      sub: `Each is ${a.sync ? 'added or updated' : 'created'} in QuickBooks, then read back to check it landed. Preview: nothing is sent.`,
-      ok: `${verb} ${items.length}`,
-      body: `<div class="facts">${items.map((i) => `<div class="fact"><span style="color:var(--label)">${esc(i.title)}</span><span>${esc(i.detail)}</span></div>`).join('')}</div>`,
-      submit: () => Promise.resolve(),
-    }).then((ok) => {
-      if (!ok) return;
-      items.forEach((i) => S.posted.unshift({ key: i.key, app: t.app, area: i.area, task: t.name, day: dayWord(0), who: i.title, text: i.detail, by: ME().who,
-                                              ref: `${a.what.charAt(0).toUpperCase()}${a.what.slice(1)} ${S.nextRef++}` }));
-      S.review = S.review.filter((i) => items.indexOf(i) === -1); S.picked = {};
-      const went = resumeRoutines(); render();
-      say(`${items.length} ${t.type === 'sync' ? 'approved' : 'posted'} and verified in QuickBooks${went.length ? ` · “${went[0]}” carried on` : ''}`);
-    });
-  }
-  function excludeDialog(id) {
-    const i = S.review.filter((x) => x.id === id)[0];
-    return dialog({
-      title: `Exclude ${i.title}?`, sub: 'It won’t be posted, and no task brings it back. You can bring it back from Posted.', ok: 'Exclude',
-      body: '<label for="apWhy">Why (so the team knows)</label><textarea id="apWhy" rows="2" maxlength="300" placeholder="e.g. Training day, not paid hours"></textarea>',
-      validate: (v) => v.querySelector('#apWhy').value.trim().length >= 3 ? null : 'why',
-      collect: (v) => ({ why: v.querySelector('#apWhy').value.trim() }),
-      submit: () => Promise.resolve(),
-    }).then((vals) => {
-      if (!vals) return;
-      S.review = S.review.filter((x) => x !== i); S.excluded.unshift(Object.assign({}, i, { by: ME().who, why: vals.why }));
-      const went = resumeRoutines(); render(); say(`Excluded${went.length ? ` · “${went[0]}” carried on` : ''}`);
-    });
-  }
-  function disconnectDialog(key) {
-    return dialog({
-      title: `Disconnect ${APPS[key].name}?`, sub: 'QuickBooks stops reading it and its tasks turn off. Everything already posted stays in QuickBooks.',
-      ok: 'Disconnect', danger: true, submit: () => Promise.resolve(),
-    }).then((ok) => {
-      if (!ok) return;
-      delete S.connected[key]; S.tasks.forEach((t) => { if (t.app === key) t.on = false; });
-      S.screen = { name: 'home' }; render(); say('Disconnected — its tasks are off');
-    });
-  }
-  function frameworkDialog() {
-    const y = '<b style="color:var(--in)">Yes</b>'; const no = '<span style="color:var(--label3)">—</span>';
-    const opened = dialog({
-      title: 'How it’s built', ok: 'Done', submit: () => Promise.resolve(),
-      sub: 'The framework behind this tab, for the people building it. The accounting team never needs this.',
-      body: `<div class="ap-flow"><span>Eesa app</span><i>→</i><span>Financial link</span><i>→</i><span>QuickBooks assistant</span><i>→</i><span>For review</span><i>→</i><span>QuickBooks</span><i>→</i><span>Activity</span></div>
-        <ol class="ap-fw">
-          <li><b>A financial link per app.</b> A read-only internal MCP carrying only the app’s money data — Chups: sales by payment method, refunds, billed customers · Attendance: approved hours per person per day, never pay rates · Invoice: checked bills. Kitchens, locations, chats and photos are never on it.</li>
-          <li><b>Connect.</b> Only a QuickBooks primary or company admin — QuickBooks’ own rule for connecting apps — after seeing what is shared and what isn’t. Disconnecting turns the app’s tasks off; what was posted stays.</li>
-          <li><b>The QuickBooks assistant</b> is the one sub-agent that reads financial links and talks to QuickBooks. It answers, drafts tasks and runs them as the task’s owner, inside that person’s QuickBooks role, keeping Intuit’s connector rules: look before creating, ask when unsure, preview every write, never delete, refuse a change that changes nothing, never touch pay, SSN or bank details, link back to QuickBooks.</li>
-          <li><b>Tasks</b> are saved instructions: source (link, data, conditions) → action (what QuickBooks accepts) → how each field is filled → schedule → owner. What QuickBooks accepts, and its fields, come from the QuickBooks tools themselves; what a person may pick comes from their QuickBooks role. No list is fixed in code.</li>
-          <li><b>Review and post.</b> Every write is a change request on the road the Approvals tab already uses. The task’s owner posts it; the amount rules still apply; a row and record type is posted once, even from two tasks; after posting it is read back — “verified”.</li>
-          <li><b>Record.</b> Activity keeps the source app, task and row, who posted, and the QuickBooks link. Watches and alerts are recorded too; they never write.</li>
-        </ol>
-        <div class="ap-h3">Who can do what</div>
-        <div class="scroll"><table class="ap-matrix"><thead><tr><th>QuickBooks role</th><th>Connect an app</th><th>Ask · Watch</th><th>Set up Post, Keep in step</th><th>Post what comes in</th></tr></thead><tbody>
-          <tr><td>Primary or company admin</td><td>${y}</td><td>${y}</td><td>${y}</td><td>Their own tasks</td></tr>
-          <tr><td>Standard all access, in-house accountant</td><td>${no}</td><td>${y}</td><td>${y}</td><td>Their own tasks</td></tr>
-          <tr><td>A/R manager, A/P manager, bookkeeper</td><td>${no}</td><td>${y}</td><td>In their areas</td><td>Their own, in their areas</td></tr>
-          <tr><td>Reports only</td><td>${no}</td><td>${y}</td><td>${no}</td><td>${no}</td></tr></tbody></table></div>
-        <div class="hint">Everything anyone sees is also limited to what their QuickBooks role can see.</div>`,
-    });
-    const box = document.querySelectorAll('.veil .dlg'); if (box.length) box[box.length - 1].classList.add('ap-wide');
-    return opened;
-  }
-
-  // ── render and events ─────────────────────────────────────────────────
+  // ── small words ─────────────────────────────────────────────────────────
+  const $a = (s) => document.querySelector(s);
+  const cash = (v) => Number(v || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  const dayWord = (iso) => { try { return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }); } catch (e) { return iso; } };
+  const shortDay = (iso) => { try { return new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); } catch (e) { return iso; } };
+  const hrs = (h) => `${Number(h || 0).toFixed(2).replace(/\.00$/, '')} h`;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+  const spec = () => ((AP.over && AP.over.apps) || []).find((a) => a.key === AP.app) || null;
+  const viewer = () => (AP.over && AP.over.viewer) || {};
+  const loading = (what) => `<div class="group"><div class="msg skel">Loading ${esc(what)}…</div></div>`;
+  // Outside somebody's role is information, said calmly; anything else is a
+  // failure, said with a way to try again.
+  const failed = (x, retry) => x.code === 'not_in_role'
+    ? `<div class="strip info">${esc(x.failed)}</div>`
+    : `<div class="group"><div class="msg bad">${esc(x.failed)}</div>
+    <div style="padding:0 16px 14px"><button class="btn sm" data-act="retry" data-what="${retry}">Try again</button></div></div>`;
   let toastTimer = null;
   function say(text) {
     let el = document.getElementById('apToast');
     if (!el) { el = document.createElement('div'); el.id = 'apToast'; el.className = 'ap-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
     el.textContent = text; el.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3200);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3400);
   }
   function badge() {
-    const n = mineToPost().length + alertsForMe().length; const dot = document.getElementById('appsDot');
+    const n = ((AP.over && AP.over.apps) || []).reduce((s, a) => s + ((a.counts && a.counts.ready_for_me) || 0), 0);
+    const dot = document.getElementById('appsDot');
     if (dot) { dot.hidden = !n; dot.textContent = String(n); }
   }
-  function render() {
-    const body = document.getElementById('appsBody'); if (!body || !S) return;
-    const h = document.getElementById('apHow'); if (h) S.howOpen = h.open;
-    body.innerHTML = banner() + (S.screen.name === 'build' ? builder() : S.screen.name === 'app' ? appScreen(S.screen.app) : home());
-    badge();
+
+  // ── the home: which apps are connected ──────────────────────────────────
+  function homeView() {
+    const o = AP.over;
+    if (!o) return loading('your apps');
+    if (o.failed) return failed(o, 'over');
+    const v = o.viewer || {};
+    const on = o.apps.filter((a) => a.connected), off = o.apps.filter((a) => !a.connected);
+    const mine = on.filter((a) => a.counts && a.counts.ready_for_me);
+    const card = (a) => `<button class="ap-acct" data-open="${a.key}"><div class="ap-mark att">${esc(a.name[0])}</div>
+      <div><div class="name">${esc(a.name)}</div><div class="meta">${esc(a.what)}${a.connected ? ` · connected by ${esc(a.connected_by)}` : ''}</div></div>
+      ${a.connected ? '<span class="ap-chev2">›</span>' : v.can_connect ? '<span class="btn primary sm">Connect</span>' : '<span class="pill">Not connected</span>'}
+      ${a.connected ? `<div class="counts">${a.counts.ready_for_me ? `<span class="pill qb">${plural(a.counts.ready_for_me, 'item')} for you to post</span>` : ''}
+        ${a.counts.waiting ? `<span class="pill">${a.counts.waiting} waiting</span>` : ''}${a.counts.suggested ? `<span class="pill wait">${plural(a.counts.suggested, 'match', 'matches')} to confirm</span>` : ''}
+        ${a.counts.failed ? `<span class="pill no">${a.counts.failed} refused</span>` : ''}</div>` : ''}</button>`;
+    return `<p class="sub" style="margin:0 4px 14px">The money side of your Eesa apps, joined to QuickBooks. Everything is decided here; QuickBooks only gets what you post.</p>
+      ${mine.length ? `<div class="stack" style="margin-bottom:14px"><div class="strip warn"><div class="row"><div><b>${plural(mine.reduce((s, a) => s + a.counts.ready_for_me, 0), 'item is', 'items are')} ready for you to post</b>From your tasks. Nothing reaches QuickBooks until you post it.</div><button class="btn primary" data-open="${mine[0].key}" data-go="review">Review</button></div></div></div>` : ''}
+      ${on.length ? `<div class="glabel" style="margin-top:0">Connected</div><div class="group">${on.map(card).join('')}</div>` : ''}
+      ${off.length ? `<div class="glabel">${on.length ? 'Add an app' : 'Connect an app'}</div><div class="group">${off.map(card).join('')}</div>
+        <p class="gnote">${v.can_connect ? 'Connecting shares only the app’s money side, read only. You see exactly what before you agree.' : 'Only a QuickBooks primary or company admin connects apps — QuickBooks’ own rule.'}</p>` : ''}
+      <div class="glabel">Coming next</div><div class="group">${o.coming.map((c) => `<div class="item"><div class="main"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.what)}</div></div><span class="pill">Soon</span></div>`).join('')}</div>
+      ${howBox()}`;
   }
-  const toTop = () => { try { window.scrollTo(0, 0); } catch (e) { /* nice to have */ } };
-  function startBuild(type, app, from) {
-    S.b = from ? Object.assign(JSON.parse(JSON.stringify(from)), { step: 0, editing: from.id, named: true })
-      : { type, app, step: 0, source: '', action: '', conds: [], map: {}, name: '', named: false,
-          when: type === 'routine' ? 'Last day of the month at 6:00 PM' : 'Every morning at 7:00', compare: true, cond: null,
-          tell: { who: [ME().who], how: ['In the QuickBooks app'], often: 'As it happens' }, steps: [] };
-    S.screen = { name: 'build' }; render(); toTop();
-  }
-  function saveBuild() {
-    const b = S.b; const clean = JSON.parse(JSON.stringify(b)); delete clean.step; delete clean.editing; delete clean.named;
-    clean.name = (b.named && b.name.trim()) || autoName(b);
-    if (b.editing) { const i = S.tasks.map((t) => t.id).indexOf(b.editing); S.tasks[i] = Object.assign({}, S.tasks[i], clean); }
-    else S.tasks.push(Object.assign({ id: `t${S.tasks.length + 1}`, owner: ME().who, on: true, last: 'Not run yet' }, clean));
-    S.b = null; S.screen = { name: 'app', app: b.app }; S.sub = 'tasks'; render(); toTop();
-    say(b.type === 'watch' ? 'Watch saved — it only reads, and tells who you chose' : b.editing ? 'Task saved' : 'Task saved — what it brings in waits in For review for you');
-  }
-  function askIn(question) {
-    show('ask'); const box = document.getElementById('askBox');
-    box.value = question; box.dispatchEvent(new Event('input')); box.focus();
-    say('In Ask — press Ask to send it to the real assistant');
-  }
-  function morning() {
-    let n = 0;
-    S.tasks.filter((t) => t.on && S.connected[t.app] && t.type !== 'routine' && DAILY.test(t.when))
-      .forEach((t) => { n += runTask(t, /night/.test(t.when) ? 'Last night 11:00' : 'Today 7:00'); });
-    S.screen = { name: 'home' }; render(); toTop();
-    say(n ? `7:00 — the assistant ran your tasks: ${n} new` : '7:00 — the assistant ran your tasks: nothing new');
+  function howBox() {
+    return `<details class="ap-how"><summary>How it works <span class="ap-chev">›</span></summary><div class="ap-body">
+      <div class="ap-layers">
+        <div class="ap-layer"><div class="k">1 · Connect</div><div class="v">An admin links an app</div><p>Only its money side is shared — never locations, phones or messages.</p></div>
+        <div class="ap-layer"><div class="k">2 · Decide</div><div class="v">You say who is who, and pay</div><p>Match people to QuickBooks employees; set each person’s pay rule and period.</p></div>
+        <div class="ap-layer"><div class="k">3 · Review</div><div class="v">Tasks bring items in</div><p>You post each one. Your company’s approval rules still apply.</p></div>
+        <div class="ap-layer"><div class="k">4 · Record</div><div class="v">Checked in QuickBooks</div><p>Read back after posting, and never posted twice.</p></div>
+      </div></div></details>`;
   }
 
-  function onClick(ev) {
+  // ── one app ─────────────────────────────────────────────────────────────
+  function appView() {
+    const a = spec();
+    if (!a) return loading('the app');
+    if (!a.connected) return homeView();
+    const v = viewer();
+    const readyN = a.counts.ready, sugg = a.counts.suggested;
+    const subs = [['review', 'To post', readyN], ['people', 'People', sugg, 'warn'],
+                  ...(v.sees_pay ? [['pay', 'Pay', a.counts.drafts, 'warn']] : []),
+                  ['tasks', 'Tasks'], ['posted', 'Posted'], ['shared', 'What’s shared']];
+    if (!subs.some((s) => s[0] === AP.sub)) AP.sub = 'review';
+    const body = { review: reviewView, people: peopleView, pay: payView, tasks: tasksView,
+                   posted: postedView, shared: sharedView }[AP.sub]();
+    return `<button class="ap-back" data-home>‹ Apps</button>
+      <div class="ap-apphead"><div class="ap-mark big att">${esc(a.name[0])}</div><div><h2>${esc(a.name)}</h2>
+        <div class="meta">${esc(a.what)} · connected by ${esc(a.connected_by)}</div></div></div>
+      ${checklist(a)}
+      <div class="seg small" role="tablist" aria-label="${esc(a.name)}">${subs.map(([k, l, n, cls]) =>
+        `<button data-sub="${k}" aria-selected="${AP.sub === k}">${l}${n ? `<span class="badge ${cls || ''}">${n}</span>` : ''}</button>`).join('')}</div>
+      ${body}`;
+  }
+  function checklist(a) {
+    const v = viewer(), p = AP.people;
+    if (!p || p.failed) return '';
+    const people = p.people || [];
+    const counted = people.filter((r) => !(r.match && r.match.status === 'LEFT_OUT'));
+    const matched = people.filter((r) => r.match && ['CONFIRMED', 'LEFT_OUT'].includes(r.match.status)).length;
+    const steps = [
+      { done: people.length > 0 && matched === people.length, go: 'people', label: 'Match your people to QuickBooks employees',
+        note: `${matched} of ${people.length} matched${p.counts.suggested ? ` · ${plural(p.counts.suggested, 'suggestion')} to confirm` : ''}` },
+    ];
+    if (v.sees_pay) {
+      const paid = counted.filter((r) => r.pay).length;
+      steps.push({ done: counted.length > 0 && paid === counted.length, go: 'pay', label: 'Set each person’s pay',
+                   note: `${paid} of ${counted.length} have pay${a.counts.drafts ? ` · ${plural(a.counts.drafts, 'draft')} to confirm` : ''}` });
+    }
+    steps.push({ done: a.tasks.length > 0, go: 'tasks', label: 'Choose what goes to QuickBooks',
+                 note: a.tasks.length ? a.tasks.map((t) => t.name).join(' · ') : 'Hours as time activities; wages as a journal entry' });
+    if (steps.every((s) => s.done)) return '';
+    return `<div class="ap-check"><div class="ap-check-h">Set up ${esc(a.name)}</div>${steps.map((s, i) => `
+      <button class="ap-check-row" data-sub="${s.go}"><span class="ap-check-n ${s.done ? 'done' : ''}">${s.done ? '✓' : i + 1}</span>
+        <span class="t"><b>${esc(s.label)}</b><small>${esc(s.note)}</small></span><span class="ap-chev2">›</span></button>`).join('')}</div>`;
+  }
+
+  // ── To post ─────────────────────────────────────────────────────────────
+  function reviewView() {
+    const r = AP.review;
+    if (!r) return loading('what is waiting');
+    if (r.failed) return failed(r, 'review');
+    const items = r.items || [];
+    if (!items.length) {
+      const a = spec();
+      return `<div class="group"><div class="msg">${a && a.tasks.length ? 'Nothing waiting. Your tasks bring items in when they run.' : 'Nothing here yet — give QuickBooks a task on the Tasks tab, and what it brings in waits here for you.'}</div></div>`;
+    }
+    const groups = {};
+    items.forEach((it) => { const k = it.task ? it.task.id : 'none'; (groups[k] = groups[k] || []).push(it); });
+    return Object.keys(groups).map((k) => {
+      const list = groups[k];
+      const t = list[0].task;
+      const mine = !!t && (AP.over.apps.find((a) => a.key === AP.app).tasks.find((x) => x.id === t.id) || {}).mine;
+      const hidden = list.filter((i) => !i.visible);
+      const ready = list.filter((i) => i.visible && i.status === 'REVIEW');
+      const waiting = list.filter((i) => i.visible && i.status === 'WAITING');
+      const refused = list.filter((i) => i.visible && i.status === 'FAILED');
+      const picked = ready.filter((i) => AP.open['pick:' + i.id] !== false);
+      const head = `<div class="ap-feedbar"><span class="ap-note"><b style="color:var(--label)">${esc(t ? t.name : 'Items')}</b>${t ? ` · ${mine ? 'yours' : 'owner ' + esc(t.owner)}` : ''}</span><span class="grow"></span>
+        ${mine && ready.length ? `<button class="btn primary" data-act="post" data-task="${esc(k)}" ${picked.length ? '' : 'disabled'}>Post ${picked.length}</button>` : ''}</div>`;
+      const row = (it, tick) => `<tr><td class="x">${tick ? `<input class="tick" type="checkbox" data-pick="${it.id}" ${AP.open['pick:' + it.id] !== false ? 'checked' : ''} aria-label="Post ${esc(it.title)}">` : ''}</td>
+        <td><div class="desc">${esc(it.title)}</div><div class="sm">${esc(it.detail || '')}${it.amount ? ` · ${cash(it.amount)}` : ''}</div>
+          ${it.lines ? `<div class="sm">${it.lines.filter((l) => l.side === 'Debit').map((l) => esc(`${l.description} — ${cash(l.amount)}`)).join('<br>')}</div>` : ''}
+          ${it.reason ? `<div class="ap-why">${esc(it.reason)}</div>` : ''}</td>
+        <td class="n">${tick ? `<button class="btn link" data-act="exclude" data-id="${it.id}">Exclude</button>` : ''}${fixFor(it)}</td></tr>`;
+      return head
+        + (!mine && ready.length ? `<div class="strip info" style="margin-bottom:10px">${plural(ready.length, 'item')} ready — ${esc(t.owner)} posts them, as the task’s owner.</div>` : '')
+        + (ready.length ? `<div class="group scroll"><table class="ap-feed"><tbody>${ready.map((i) => row(i, mine)).join('')}</tbody></table></div>` : '')
+        + (refused.length ? `<div class="glabel">QuickBooks refused</div><div class="group scroll"><table class="ap-feed"><tbody>${refused.map((i) => row(i, false)).join('')}</tbody></table></div>
+            <p class="gnote">A refused send can be tried again from <button class="btn link" data-act="approvals">Approvals</button> once the reason is fixed.</p>` : '')
+        + (waiting.length ? `<details class="ap-how" style="margin-top:12px" ${AP.open['wait:' + k] ? 'open' : ''} data-keep="wait:${esc(k)}"><summary>Waiting (${waiting.length}) <span class="ap-chev">›</span></summary>
+            <div class="scroll"><table class="ap-feed"><tbody>${waiting.map((i) => row(i, false)).join('')}</tbody></table></div></details>` : '')
+        + (hidden.length ? `<p class="gnote">${plural(hidden.length, 'item')} outside your QuickBooks role.</p>` : '');
+    }).join('<div style="height:16px"></div>')
+      + '<p class="gnote">Nothing is posted twice. Items that wait say why, and come through by themselves on a later run once they can.</p>';
+  }
+  function fixFor(it) {
+    const r = it.reason || '';
+    if (/^Match /.test(r)) return `<button class="btn link" data-go-sub="people" data-filter="missing">Match</button>`;
+    if (/no pay set/i.test(r)) return `<button class="btn link" data-go-sub="pay">Set pay</button>`;
+    return '';
+  }
+
+  // ── People ──────────────────────────────────────────────────────────────
+  function peopleView() {
+    const p = AP.people;
+    if (!p) return loading('your people');
+    if (p.failed) return failed(p, 'people');
+    const v = p.viewer || {};
+    const rows = p.people || [];
+    const buckets = { all: rows,
+      confirm: rows.filter((r) => r.match && r.match.status === 'SUGGESTED'),
+      missing: rows.filter((r) => !r.match),
+      matched: rows.filter((r) => r.match && ['CONFIRMED', 'ADDING', 'LEFT_OUT'].includes(r.match.status)) };
+    const shown = buckets[AP.filter] || rows;
+    const chips = [['all', 'Everyone'], ['confirm', 'To confirm'], ['missing', 'Not in QuickBooks'], ['matched', 'Done']]
+      .map(([k, l]) => `<button class="ap-chip" data-filter="${k}" aria-pressed="${AP.filter === k}">${l} <span>${buckets[k].length}</span></button>`).join('');
+    const emps = p.employees || [];
+    const choose = (r) => v.matches && emps.length ? `<select class="pick" data-choose="${esc(r.ref)}" aria-label="Choose ${esc(r.name)}'s QuickBooks employee"><option value="">${r.match && r.match.quickbooks_id ? 'Choose another…' : 'Choose…'}</option>
+      ${emps.filter((e) => e.active).map((e) => `<option value="${esc(e.id)}">${esc(e.name)}${e.email ? ' · ' + esc(e.email) : ''}</option>`).join('')}</select>` : '';
+    const matchBlock = (r) => {
+      const m = r.match;
+      if (!m) return `<div class="ap-mrow"><span class="pill wait">Not found in QuickBooks</span>
+        ${v.matches ? `<span class="ap-acts">${v.adds_employees ? `<button class="btn sm" data-act="add" data-ref="${esc(r.ref)}">Add to QuickBooks</button>` : ''}${choose(r)}<button class="btn link" data-act="leave" data-ref="${esc(r.ref)}">Leave out</button></span>` : ''}</div>`;
+      if (m.status === 'SUGGESTED') return `<div class="ap-mrow"><span class="pill qb">Suggested: ${esc(m.quickbooks_name)}</span><span class="ap-eg">${esc(m.reason)}${m.method === 'assistant' ? ' · from the assistant' : ''}</span>
+        ${v.matches ? `<span class="ap-acts"><button class="btn primary sm" data-act="confirm" data-ref="${esc(r.ref)}">Confirm</button>${choose(r)}<button class="btn link" data-act="leave" data-ref="${esc(r.ref)}">Leave out</button></span>` : ''}</div>`;
+      if (m.status === 'CONFIRMED') return `<div class="ap-mrow"><span class="pill yes">✓ ${esc(m.quickbooks_name)}</span><span class="ap-eg">${esc(m.method === 'added' ? 'Added to QuickBooks from Eesa' : 'Confirmed')}${m.decided_by ? ' by ' + esc(m.decided_by) : ''}</span>
+        ${v.matches ? `<span class="ap-acts"><button class="btn link" data-act="unmatch" data-ref="${esc(r.ref)}">Change</button></span>` : ''}</div>`;
+      if (m.status === 'ADDING') return `<div class="ap-mrow"><span class="pill wait">Being added to QuickBooks…</span><span class="ap-eg">Matched as soon as QuickBooks has them.</span></div>`;
+      return `<div class="ap-mrow"><span class="pill">Left out of QuickBooks</span><span class="ap-eg">${esc(m.reason)}</span>
+        ${v.matches ? `<span class="ap-acts"><button class="btn link" data-act="unmatch" data-ref="${esc(r.ref)}">Undo</button></span>` : ''}</div>`;
+    };
+    const payBlock = (r) => !v.sees_pay ? '' : r.draft_pay ? `<div class="ap-mrow"><span class="pill wait">Draft pay</span><span class="ap-eg">${esc(r.draft_pay.words)}${r.draft_pay.by_assistant ? ' · from the assistant' : ''}</span>
+        ${v.sets_pay ? `<span class="ap-acts"><button class="btn primary sm" data-act="confirm-draft" data-what="terms" data-id="${r.draft_pay.id}">Confirm</button><button class="btn link" data-act="discard-draft" data-what="terms" data-id="${r.draft_pay.id}">Discard</button></span>` : ''}</div>`
+      : `<div class="ap-mrow"><span class="${r.pay ? 'pill' : 'pill wait'}">${r.pay ? esc(r.pay.words) : 'No pay set'}</span>
+        ${v.sets_pay && !(r.match && r.match.status === 'LEFT_OUT') ? `<span class="ap-acts"><button class="btn link" data-act="pay" data-ref="${esc(r.ref)}">${r.pay ? 'Change pay' : 'Set pay'}</button></span>` : ''}</div>`;
+    return `${assistBox('people')}
+      ${p.employees_error ? `<div class="strip warn" style="margin-bottom:12px"><b>QuickBooks’ employee list is outside your role</b>${esc(p.employees_error)}</div>` : ''}
+      ${!v.matches ? '<div class="strip info" style="margin-bottom:12px">Your QuickBooks role doesn’t change employees, so you can see who is who but not change it.</div>' : ''}
+      <div class="ap-chips">${chips}</div>
+      <div class="group">${shown.map((r) => `<div class="ap-person"><div class="ap-pname"><b>${esc(r.name)}</b><span class="meta">${esc(r.email || 'no email')}${r.on_roster === false ? ' · no longer on the roster' : ''}</span></div>
+        ${matchBlock(r)}${payBlock(r)}</div>`).join('') || '<div class="msg">Nobody here.</div>'}</div>
+      <p class="gnote">Eesa suggests from the same email or name; nothing is posted for someone until a person confirms who they are.</p>`;
+  }
+
+  // ── Pay ─────────────────────────────────────────────────────────────────
+  function payView() {
+    const s = AP.setup, p = AP.people;
+    if (!s || !p) return loading('pay');
+    if (s.failed) return failed(s, 'setup');
+    const v = viewer();
+    const draftBtns = (what, x) => x.status === 'DRAFT' && v.sets_pay ? `<button class="btn primary sm" data-act="confirm-draft" data-what="${what}" data-id="${x.id}">Confirm</button><button class="btn link" data-act="discard-draft" data-what="${what}" data-id="${x.id}">Discard</button>` : '';
+    const periods = s.schedules.map((x) => `<div class="item"><div class="main"><div class="name">${esc(x.name)} ${x.status === 'DRAFT' ? `<span class="pill wait">Draft${x.by_assistant ? ' · assistant' : ''}</span>` : ''}</div>
+      <div class="meta">${esc(x.words)} · ${plural(x.in_use, 'person', 'people')}</div></div>${draftBtns('schedule', x)}
+      ${v.sets_pay && x.status === 'CONFIRMED' ? `<button class="btn link" data-act="edit-schedule" data-id="${x.id}">Edit</button>` : ''}</div>`).join('');
+    const rules = s.rules.map((x) => `<div class="item"><div class="main"><div class="name">${esc(x.name)} ${x.status === 'DRAFT' ? `<span class="pill wait">Draft${x.by_assistant ? ' · assistant' : ''}</span>` : ''}</div>
+      <div class="meta">${esc(x.words)} · ${plural(x.in_use, 'person', 'people')}</div></div>${draftBtns('rule', x)}
+      ${v.sets_pay && x.status === 'CONFIRMED' ? `<button class="btn link" data-act="edit-rule" data-id="${x.id}">Edit</button>` : ''}</div>`).join('');
+    const people = (p.people || []).filter((r) => !(r.match && r.match.status === 'LEFT_OUT'));
+    return `${assistBox('pay')}
+      <div class="glabel" style="margin-top:0">Pay periods</div>
+      <div class="group">${periods || '<div class="msg">No pay periods yet. Add how often your team is paid — every week, every two weeks, twice a month or every month.</div>'}</div>
+      ${v.sets_pay ? '<div class="ap-addrow"><button class="btn sm" data-act="edit-schedule">+ Add a pay period</button></div>' : ''}
+      <div class="glabel">Overtime rules</div>
+      <div class="group">${rules || '<div class="msg">No rules yet. Without one, every hour is paid at the person’s rate.</div>'}</div>
+      ${v.sets_pay ? '<div class="ap-addrow"><button class="btn sm" data-act="edit-rule">+ Add an overtime rule</button></div>' : ''}
+      <div class="glabel">Each person’s pay</div>
+      <div class="group">${people.map((r) => `<div class="item"><div class="main"><div class="name">${esc(r.name)}</div>
+        <div class="meta">${r.pay ? esc(r.pay.words) + ' · from ' + esc(dayWord(r.pay.effective_from)) : r.draft_pay ? 'Draft: ' + esc(r.draft_pay.words) : 'No pay set'}${r.recorded_rate != null && !r.pay ? ` · Attendance has ${cash(r.recorded_rate)} an hour recorded` : ''}</div></div>
+        ${r.draft_pay ? draftBtns('terms', r.draft_pay) : ''}
+        ${v.sets_pay ? `<button class="btn ${r.pay ? 'link' : 'sm'}" data-act="pay" data-ref="${esc(r.ref)}">${r.pay ? 'Change' : 'Set pay'}</button>` : ''}</div>`).join('') || '<div class="msg">Nobody to pay yet.</div>'}</div>
+      ${totalsView(s)}`;
+  }
+  function totalsView(s) {
+    const confirmed = s.schedules.filter((x) => x.status === 'CONFIRMED');
+    if (!confirmed.length) return '';
+    if (!AP.periodPick.schedule) AP.periodPick.schedule = confirmed[0].id;
+    const d = AP.period;
+    const picker = `<div class="ap-cond"><select class="pick" data-period="schedule" aria-label="Pay period">${confirmed.map((x) => `<option value="${x.id}" ${x.id === AP.periodPick.schedule ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      ${d && !d.failed ? `<select class="pick" data-period="start" aria-label="Which period">${d.periods.map((p) => `<option value="${p.start}" ${p.start === d.start ? 'selected' : ''}>${esc(shortDay(p.start))} – ${esc(shortDay(p.end))}</option>`).join('')}</select>` : ''}</div>`;
+    let body;
+    if (!d) body = '<div class="msg skel">Working it out…</div>';
+    else if (d.failed) body = `<div class="msg bad">${esc(d.failed)}</div>`;
+    else if (!d.rows.length) body = '<div class="msg">Nobody’s pay is on this period yet.</div>';
+    else body = `<div class="scroll"><table class="ap-feed"><thead><tr><th>Person</th><th class="n">Hours</th><th>At each rate</th><th class="n">Pay</th></tr></thead><tbody>
+      ${d.rows.map((r) => `<tr><td><button class="btn link" data-act="days" data-ref="${esc(r.ref)}" style="font-weight:600;color:var(--label)">${esc(r.name)} ${AP.open['days:' + r.ref] ? '▾' : '▸'}</button>
+          ${r.pending.length ? `<div class="ap-why">${plural(r.pending.length, 'day')} not approved yet — not counted</div>` : ''}</td>
+        <td class="n">${hrs(r.calc.hours)}</td><td>${r.calc.at.map((a) => `${hrs(a.hours)} at ${a.times}×`).join('<br>') || '—'}</td><td class="n"><b>${cash(r.calc.gross)}</b></td></tr>
+        ${AP.open['days:' + r.ref] ? `<tr><td colspan="4" style="background:var(--fill)">${r.calc.days.map((x) => `<div class="sm">${esc(dayWord(x.day))}: ${hrs(x.hours)}${x.at.length > 1 || (x.at[0] && x.at[0].times !== 1) ? ' — ' + x.at.map((a) => `${hrs(a.hours)} at ${a.times}×`).join(', ') : ''}${x.why.length ? ` <span class="ap-eg">(${esc(x.why.join('; '))})</span>` : ''}</div>`).join('') || '<div class="sm">No approved days in this period.</div>'}
+          ${r.calc.notes.map((n) => `<div class="sm">${esc(n)}</div>`).join('')}</td></tr>` : ''}`).join('')}
+      <tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>${cash(d.total)}</b></td></tr></tbody></table></div>`;
+    const warn = d && !d.failed && d.worked_without_pay.length ? `<div class="strip warn" style="margin-top:10px"><b>Worked, but no pay set</b>${d.worked_without_pay.map((w) => esc(w.name)).join(', ')} — set their pay and this period includes them.</div>` : '';
+    return `<div class="glabel">Pay period totals</div><div class="group"><div class="ap-conds">${picker}</div>${body}</div>${warn}
+      <p class="gnote">Only days a manager approved are paid. Open a name to see each day and why it was paid as it was.</p>`;
+  }
+
+  // ── Tasks ───────────────────────────────────────────────────────────────
+  function tasksView() {
+    const a = spec();
+    const every = (t) => t.schedule && t.schedule.every === 'manual' ? 'Only when run by hand'
+      : t.kind === 'wage_journal' ? `Checks for finished pay periods every morning at ${esc((t.schedule && t.schedule.at) || '07:00')}`
+      : `Every morning at ${esc((t.schedule && t.schedule.at) || '07:00')}`;
+    const cards = a.tasks.map((t) => `<div class="ap-task"><div class="top"><div class="main"><b>${esc(t.name)}</b></div><span class="pill ${t.is_on ? 'yes' : 'wait'}">${t.is_on ? 'On' : 'Off'}</span></div>
+      <div class="ap-sentence">${esc(t.about)}${t.pay_schedule ? ` Pay period: <span class="ap-tok">${esc(t.pay_schedule.name)}</span>.` : ''}</div>
+      <dl><div><dt>Runs</dt><dd>${every(t)}</dd></div>
+        <div><dt>Last run</dt><dd>${t.last_run_at ? `${esc(new Date(t.last_run_at).toLocaleString())} — ${t.last_run.error ? `<span style="color:var(--out)">${esc(t.last_run.error)}</span>` : `${plural(t.last_run.ready || 0, 'item')} brought in, ${t.last_run.waiting || 0} waiting`}` : 'Not run yet'}</dd></div>
+        <div><dt>Posted by</dt><dd>${esc(t.owner_name)}${t.mine ? ' — you' : ''}, item by item</dd></div></dl>
+      <div class="foot"><span class="meta">${t.mine ? 'You own this task' : 'Owned by ' + esc(t.owner)}</span>
+        ${t.mine ? `<button class="btn sm" data-act="run" data-id="${t.id}">Run now</button><button class="btn sm" data-act="edit-task" data-id="${t.id}">Edit</button>
+          <button class="btn sm" data-act="toggle" data-id="${t.id}">${t.is_on ? 'Turn off' : 'Turn on'}</button><button class="btn link quiet" data-act="delete-task" data-id="${t.id}">Delete</button>` : ''}</div></div>`).join('');
+    const kinds = a.kinds.map((k) => `<button class="ap-type" data-act="new-task" data-kind="${k.key}" ${k.can ? '' : 'disabled'}>
+      <span class="top"><b>${esc(k.name)}</b><span class="ap-kind write">posts</span></span><span class="d">${esc(k.about)}</span>
+      ${k.can ? '' : `<span class="d">Needs a QuickBooks role that can create ${esc(k.kind)}s${k.key === 'wage_journal' ? ' and see payroll' : ''}.</span>`}</button>`).join('');
+    return `<div class="stack">${cards || '<div class="group"><div class="msg">No tasks yet. A task reads Attendance on a schedule and brings items in for you to post — it never posts by itself.</div></div>'}</div>
+      <div class="glabel">Give QuickBooks a task</div><div class="ap-types">${kinds}</div>`;
+  }
+
+  // ── Posted, and What's shared ───────────────────────────────────────────
+  function postedView() {
+    const p = AP.posted, x = AP.excluded;
+    if (!p) return loading('what was posted');
+    if (p.failed) return failed(p, 'posted');
+    const state = (it) => {
+      const c = it.change;
+      if (!c) return '<span class="pill">Posting…</span>';
+      if (c.status === 'VERIFIED') return `<span class="pill yes">In QuickBooks${c.quickbooks_id ? ' · #' + esc(c.quickbooks_id) : ''}</span>`;
+      if (c.status === 'EXECUTED') return '<span class="pill yes">Sent · checking</span>';
+      if (c.status === 'PENDING') return `<span class="pill wait">Waiting for ${plural(c.approvals_needed, 'approver')}</span>`;
+      if (c.status === 'APPROVED' || c.status === 'EXECUTING') return '<span class="pill wait">Sending…</span>';
+      return `<span class="pill no">${esc(c.status_label)}</span>`;
+    };
+    const rows = (p.items || []).map((it) => it.visible ? `<div class="item"><div class="main"><div class="name">${esc(it.title)}</div>
+      <div class="meta">${esc(it.detail || '')}${it.amount ? ' · ' + cash(it.amount) : ''} · posted by ${esc(it.decided_by)}${it.decided_at ? ' · ' + esc(new Date(it.decided_at).toLocaleDateString()) : ''}</div></div>${state(it)}</div>`
+      : `<div class="item"><div class="main"><div class="meta">${esc(it.title)}</div></div>${state(it)}</div>`).join('');
+    const gone = x && !x.failed ? (x.items || []).filter((i) => i.visible).map((it) => `<div class="item"><div class="main"><div class="name">${esc(it.title)}</div>
+      <div class="meta">Excluded by ${esc(it.decided_by)} — “${esc(it.reason)}”</div></div><button class="btn sm" data-act="bring-back" data-id="${it.id}">Bring back</button></div>`).join('') : '';
+    return `<div class="group">${rows || '<div class="msg">Nothing posted yet.</div>'}</div>
+      <p class="gnote">“In QuickBooks” means Eesa read it back after sending. To take one back, an approver undoes it in QuickBooks — a task never deletes.</p>
+      <div class="glabel">Excluded</div><div class="group">${gone || '<div class="msg">Nothing excluded.</div>'}</div>`;
+  }
+  function sharedView() {
+    const a = spec(), v = viewer();
+    return `<div class="glabel" style="margin-top:0">Shared with QuickBooks — read only</div><div class="group">${a.shares.map((s) => `<div class="item"><div class="main"><div class="name">${esc(s.title)}</div><div class="meta">${esc(s.note)}</div></div>
+      <span class="pill ${s.visible ? 'yes' : ''}">${s.visible ? 'You can see this' : 'Outside your role'}</span></div>`).join('')}</div>
+      <div class="glabel">Never shared</div><div class="group">${a.not_shared.map((n) => `<div class="item"><div class="main"><div class="name">${esc(n)}</div></div><span class="pill">Stays in ${esc(a.name)}</span></div>`).join('')}</div>
+      <p class="gnote">Reads run as ${esc(a.connected_by)}, who connected it. QuickBooks can’t change anything in ${esc(a.name)}.</p>
+      ${v.can_connect ? `<div style="margin-top:18px"><button class="btn quiet" data-act="disconnect">Disconnect ${esc(a.name)}</button></div>` : ''}`;
+  }
+
+  // ── The assistant: plain words in, drafts out, a person confirms ────────
+  function assistBox(where) {
+    const s = AP.assist && AP.assist.where === where ? AP.assist : null;
+    const eg = where === 'pay' ? 'e.g. “Jeeva is $22.50 an hour, overtime after 8 hours a day at 1.5×, paid every two weeks from 1 September”'
+                               : 'e.g. “Match everyone you can, and tell me who isn’t in QuickBooks”';
+    return `<div class="ap-assist"><label for="apAsk">Tell the assistant what to set up — it drafts, you confirm</label>
+      <div class="ap-assist-row"><input id="apAsk" class="pick" placeholder="${esc(eg)}" ${s && s.busy ? 'disabled' : ''} value="${esc(s ? s.q : '')}">
+        <button class="btn primary sm" data-act="assist" data-where="${where}" ${s && s.busy ? 'disabled' : ''}>${s && s.busy ? 'Working…' : 'Ask'}</button></div>
+      ${s && s.answer ? `<div class="ap-assist-out">${s.answer}</div>` : ''}</div>`;
+  }
+  async function assist(where) {
+    const box = $a('#apAsk'); const q = (box && box.value || '').trim();
+    if (!q) return;
+    AP.assist = { where, q, busy: true, answer: '<p class="skel">Reading Attendance and QuickBooks…</p>' };
+    render();
+    try {
+      const sent = await call('specialist_chat_send', { question: `[Apps → ${spec().name} → ${where === 'pay' ? 'Pay' : 'People'}] ${q}` });
+      let t = sent.turn;
+      for (let i = 0; i < 90 && t.status !== 'DONE' && t.status !== 'FAILED'; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const st = await platform('specialist_chat_status', { turn_id: sent.turn.id });
+        if (st.ok) t = st.turn;
+      }
+      AP.assist = { where, q: '', busy: false, answer: t.status === 'DONE' ? md(t.answer) : `<p style="color:var(--out)">${esc(t.error || 'No answer came back.')}</p>` };
+    } catch (e) {
+      AP.assist = { where, q, busy: false, answer: `<p style="color:var(--out)">${esc(e.message)}</p>` };
+    }
+    await refresh('over', 'people', 'setup');
+  }
+
+  // ── dialogs ─────────────────────────────────────────────────────────────
+  function lastDialog() { const all = document.querySelectorAll('.veil .dlg'); return all[all.length - 1]; }
+  function connectDialog(key) {
+    const a = AP.over.apps.find((x) => x.key === key);
+    return dialog({
+      title: `Connect ${a.name} to QuickBooks?`, ok: 'Connect',
+      sub: 'Only its money side is shared, read only. You can disconnect it any time.',
+      body: `<div class="ap-h3">QuickBooks will be able to read</div><div class="ap-list">${a.shares.map((s) => `<div class="ap-li"><span class="ic yes">✓</span><div>${esc(s.title)}<small>${esc(s.note)}</small></div></div>`).join('')}</div>
+        <div class="ap-h3">Never shared</div><div class="ap-list">${a.not_shared.map((n) => `<div class="ap-li"><span class="ic no">✕</span><div>${esc(n)}</div></div>`).join('')}</div>
+        <div class="ap-h3">And QuickBooks won’t</div><div class="ap-list"><div class="ap-li"><span class="ic no">✕</span><div>Change anything in ${esc(a.name)}</div></div>
+        <div class="ap-li"><span class="ic no">✕</span><div>Post anything until somebody sets up a task and posts what it brings in</div></div>
+        <div class="ap-li"><span class="ic no">✕</span><div>Show anybody more than their own QuickBooks role allows</div></div></div>
+        <div class="hint">Reads will run as you — you need to manage ${esc(a.name)}.</div>`,
+      submit: () => call('qb_app_connect', { app: key, action: 'connect' }),
+    }).then((ok) => { if (!ok) return; AP.screen = 'app'; AP.app = key; AP.sub = 'people'; say(`${a.name} connected — read only`); return refresh('over', 'people', 'setup', 'review'); });
+  }
+  function payDialog(ref) {
+    const person = AP.people.people.find((r) => r.ref === ref);
+    const s = AP.setup, now = person.pay || person.draft_pay;
+    const scheds = s.schedules.filter((x) => x.status === 'CONFIRMED');
+    const rules = s.rules.filter((x) => x.status === 'CONFIRMED');
+    if (!scheds.length) {
+      return dialog({ title: `${person.name}’s pay`, ok: 'Add a pay period', sub: 'First, say how often people are paid — pay is set per pay period.', body: '', submit: async () => {} })
+        .then((ok) => ok && scheduleDialog());
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const opened = dialog({
+      title: `${person.name}’s pay`, ok: 'Save pay',
+      sub: 'Your decision — Eesa only works it out. It applies from the day you choose.',
+      body: `<label>How they are paid</label><select id="pdType"><option value="hourly" ${!now || now.pay_type === 'hourly' ? 'selected' : ''}>By the hour</option><option value="salary" ${now && now.pay_type === 'salary' ? 'selected' : ''}>A fixed amount each period</option></select>
+        <label for="pdRate" id="pdRateL">Rate ($ an hour)</label><input id="pdRate" inputmode="decimal" value="${esc(now ? now.rate : '')}" placeholder="0.00">
+        ${person.recorded_rate != null ? `<div class="hint">Attendance has ${cash(person.recorded_rate)} an hour recorded for ${esc(person.name)}. <button type="button" class="btn link" data-use="${esc(person.recorded_rate)}">Use it</button></div>` : ''}
+        <label for="pdRule">Overtime</label><select id="pdRule"><option value="">Every hour at the rate</option>${rules.map((r) => `<option value="${r.id}" ${now && now.rule && now.rule.id === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
+        <div class="hint" id="pdRuleW"></div>
+        <label for="pdSched">Pay period</label><select id="pdSched">${scheds.map((x) => `<option value="${x.id}" ${now && now.schedule && now.schedule.id === x.id ? 'selected' : ''}>${esc(x.name)} — ${esc(x.words)}</option>`).join('')}</select>
+        <label for="pdFrom">From</label><input id="pdFrom" type="date" value="${esc(now ? now.effective_from : today)}">`,
+      validate: (d) => (parseFloat(d.querySelector('#pdRate').value) > 0 && d.querySelector('#pdFrom').value) ? null : 'rate',
+      collect: (d) => ({ pay_type: d.querySelector('#pdType').value, rate: d.querySelector('#pdRate').value.replace(/[^0-9.]/g, ''),
+                         rule_id: d.querySelector('#pdRule').value, schedule_id: d.querySelector('#pdSched').value,
+                         effective_from: d.querySelector('#pdFrom').value }),
+      submit: (v) => call('qb_pay_save', Object.assign({ what: 'terms', app: AP.app, ref }, v)),
+    });
+    wirePayDialog();
+    return opened.then((ok) => { if (ok) { say(`${person.name}’s pay is saved`); return refresh('over', 'people', 'period'); } });
+  }
+  function wirePayDialog() {
+    const d = lastDialog(); if (!d) return;
+    const rules = (AP.setup && AP.setup.rules) || [];
+    const sync = () => {
+      const type = d.querySelector('#pdType'); if (!type) return;
+      d.querySelector('#pdRateL').textContent = type.value === 'salary' ? 'Amount each pay period ($)' : 'Rate ($ an hour)';
+      const r = rules.find((x) => x.id === d.querySelector('#pdRule').value);
+      d.querySelector('#pdRuleW').textContent = r ? r.words : 'No overtime: every approved hour at the rate.';
+    };
+    d.addEventListener('change', sync);
+    d.addEventListener('click', (e) => { const b = e.target.closest('[data-use]'); if (b) { d.querySelector('#pdRate').value = b.dataset.use; d.querySelector('#pdRate').dispatchEvent(new Event('input', { bubbles: true })); } });
+    sync();
+  }
+  function scheduleDialog(id) {
+    const now = id ? AP.setup.schedules.find((x) => x.id === id) : null;
+    const today = new Date(); const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const opened = dialog({
+      title: now ? `Edit “${now.name}”` : 'Add a pay period', ok: 'Save',
+      sub: 'How often a group of people is paid. People are put on it in their pay.',
+      body: `<label for="scName">Name</label><input id="scName" value="${esc(now ? now.name : '')}" placeholder="e.g. Kitchen staff — every two weeks">
+        <label for="scFreq">How often</label><select id="scFreq">${AP.setup.frequencies.map((f) => `<option value="${f.key}" ${now && now.frequency === f.key ? 'selected' : ''}>${esc(f.label)}</option>`).join('')}</select>
+        <div id="scAnchorBox"><label for="scAnchor">The first day of one period</label><input id="scAnchor" type="date" value="${esc(now && now.anchor ? now.anchor : monday.toISOString().slice(0, 10))}">
+        <div class="hint">Any period’s first day — the rest follow from it.</div></div>`,
+      validate: (d) => d.querySelector('#scName').value.trim() ? null : 'name',
+      collect: (d) => ({ name: d.querySelector('#scName').value.trim(), frequency: d.querySelector('#scFreq').value,
+                         anchor: ['weekly', 'biweekly'].includes(d.querySelector('#scFreq').value) ? d.querySelector('#scAnchor').value : null }),
+      submit: (v) => call('qb_pay_save', Object.assign({ what: 'schedule', id: id || undefined }, v)),
+    });
+    wireScheduleDialog();
+    return opened.then((ok) => { if (ok) { say('Pay period saved'); return refresh('setup', 'people', 'period'); } });
+  }
+  function wireScheduleDialog() {
+    const d = lastDialog(); if (!d || !d.querySelector('#scFreq')) return;
+    const sync = () => { d.querySelector('#scAnchorBox').hidden = !['weekly', 'biweekly'].includes(d.querySelector('#scFreq').value); };
+    d.addEventListener('change', sync); sync();
+  }
+  // A rule, drawn as the words a person would say, and read back live.
+  function ruleWords(r) {
+    const x = (n) => `${Number(n)}×`;
+    const parts = [];
+    (r.daily || []).forEach((t) => parts.push(`past ${t.after} hours in a day at ${x(t.times)}`));
+    (r.weekly || []).forEach((t) => parts.push(`regular hours past ${t.after} in a week at ${x(t.times)}`));
+    if (r.seventh_day && r.seventh_day.on) parts.push(`the seventh day in a row: the first ${r.seventh_day.after} hours at ${x(r.seventh_day.times)}, the rest at ${x(r.seventh_day.then)}`);
+    if (!parts.length) return 'Every hour at the rate.';
+    const t = parts.join('; ') + ((r.weekly || []).length || (r.seventh_day && r.seventh_day.on) ? ` (weeks start on ${WEEK[r.week_starts || 0]})` : '');
+    return t[0].toUpperCase() + t.slice(1) + '.';
+  }
+  function ruleDialog(id) {
+    const now = id ? AP.setup.rules.find((x) => x.id === id) : null;
+    const start = now ? now.rule : { week_starts: 0, daily: [], weekly: [], seventh_day: { on: false } };
+    const steps = (kind, list) => list.map((t, i) => `<div class="ap-steprow" data-kind="${kind}">After <input class="pick" data-f="after" inputmode="decimal" value="${t.after}" style="width:64px"> hours ${kind === 'daily' ? 'in a day' : 'in a week'} → <input class="pick" data-f="times" inputmode="decimal" value="${t.times}" style="width:56px"> × <button type="button" class="btn link" data-rm="${kind}:${i}">Remove</button></div>`).join('');
+    const opened = dialog({
+      title: now ? `Edit “${now.name}”` : 'Add an overtime rule', ok: 'Save rule',
+      sub: 'Your rule, in your numbers. Start from a shape, then change anything.',
+      body: `<label for="ruName">Name</label><input id="ruName" value="${esc(now ? now.name : '')}" placeholder="e.g. Kitchen overtime">
+        ${now ? '' : `<div class="ap-h3">Start from</div><div class="ap-chips">${AP.setup.starting_points.map((s) => `<button type="button" class="ap-chip" data-start="${s.key}" title="${esc(s.about)}">${esc(s.name)}</button>`).join('')}</div>`}
+        <div class="ap-h3">In a day</div><div id="ruDaily">${steps('daily', start.daily || [])}</div><button type="button" class="btn link" data-addstep="daily">+ Add a step</button>
+        <div class="ap-h3">In a week</div><div id="ruWeekly">${steps('weekly', start.weekly || [])}</div><button type="button" class="btn link" data-addstep="weekly">+ Add a step</button>
+        <div class="ap-h3">The seventh day in a row</div>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ru7" style="width:auto" ${start.seventh_day && start.seventh_day.on ? 'checked' : ''}> Pay it differently</label>
+        <div id="ru7box" class="ap-steprow">First <input class="pick" id="ru7after" value="${(start.seventh_day && start.seventh_day.after) || 8}" style="width:56px"> hours at <input class="pick" id="ru7times" value="${(start.seventh_day && start.seventh_day.times) || 1.5}" style="width:56px"> ×, the rest at <input class="pick" id="ru7then" value="${(start.seventh_day && start.seventh_day.then) || 2}" style="width:56px"> ×</div>
+        <label for="ruWeek">Weeks start on</label><select id="ruWeek">${WEEK.map((w, i) => `<option value="${i}" ${Number(start.week_starts || 0) === i ? 'selected' : ''}>${w}</option>`).join('')}</select>
+        <div class="ap-rule-read" id="ruRead"></div>`,
+      validate: (d) => d.querySelector('#ruName').value.trim() ? null : 'name',
+      collect: (d) => ({ name: d.querySelector('#ruName').value.trim(), rule: readRule(d) }),
+      submit: (v) => call('qb_pay_save', { what: 'rule', id: id || undefined, name: v.name, rule: v.rule }),
+    });
+    wireRuleDialog();
+    return opened.then((ok) => { if (ok) { say('Rule saved'); return refresh('setup', 'people', 'period'); } });
+  }
+  function readRule(d) {
+    const num = (v) => Number(String(v).replace(/[^0-9.]/g, '')) || 0;
+    const list = (kind) => [...d.querySelectorAll(`.ap-steprow[data-kind="${kind}"]`)].map((row) => ({
+      after: num(row.querySelector('[data-f=after]').value), times: num(row.querySelector('[data-f=times]').value) }));
+    const on = d.querySelector('#ru7').checked;
+    return { week_starts: Number(d.querySelector('#ruWeek').value), daily: list('daily'), weekly: list('weekly'),
+             seventh_day: on ? { on, after: num(d.querySelector('#ru7after').value), times: num(d.querySelector('#ru7times').value), then: num(d.querySelector('#ru7then').value) } : { on: false } };
+  }
+  function wireRuleDialog() {
+    const d = lastDialog(); if (!d || !d.querySelector('#ruDaily')) return;
+    const row = (kind, t) => `<div class="ap-steprow" data-kind="${kind}">After <input class="pick" data-f="after" inputmode="decimal" value="${t.after}" style="width:64px"> hours ${kind === 'daily' ? 'in a day' : 'in a week'} → <input class="pick" data-f="times" inputmode="decimal" value="${t.times}" style="width:56px"> × <button type="button" class="btn link" data-rm="x">Remove</button></div>`;
+    const sync = () => { d.querySelector('#ru7box').hidden = !d.querySelector('#ru7').checked; d.querySelector('#ruRead').textContent = 'Reads: ' + ruleWords(readRule(d)); };
+    const fill = (r) => {
+      d.querySelector('#ruDaily').innerHTML = (r.daily || []).map((t) => row('daily', t)).join('');
+      d.querySelector('#ruWeekly').innerHTML = (r.weekly || []).map((t) => row('weekly', t)).join('');
+      d.querySelector('#ru7').checked = !!(r.seventh_day && r.seventh_day.on);
+      if (r.seventh_day && r.seventh_day.on) { d.querySelector('#ru7after').value = r.seventh_day.after; d.querySelector('#ru7times').value = r.seventh_day.times; d.querySelector('#ru7then').value = r.seventh_day.then; }
+      d.querySelector('#ruWeek').value = String(r.week_starts || 0);
+      sync();
+    };
+    d.addEventListener('click', (e) => {
+      const st = e.target.closest('[data-start]');
+      if (st) { const sp = AP.setup.starting_points.find((s) => s.key === st.dataset.start); fill(sp.rule); if (!d.querySelector('#ruName').value) { d.querySelector('#ruName').value = sp.name; d.querySelector('#ruName').dispatchEvent(new Event('input', { bubbles: true })); } return; }
+      const add = e.target.closest('[data-addstep]');
+      if (add) { const k = add.dataset.addstep; d.querySelector(k === 'daily' ? '#ruDaily' : '#ruWeekly').insertAdjacentHTML('beforeend', row(k, { after: k === 'daily' ? 8 : 40, times: 1.5 })); sync(); return; }
+      const rm = e.target.closest('[data-rm]');
+      if (rm) { rm.closest('.ap-steprow').remove(); sync(); }
+    });
+    d.addEventListener('input', sync); d.addEventListener('change', sync);
+    sync();
+  }
+  async function taskDialog(kind, id) {
+    const a = spec();
+    const now = id ? a.tasks.find((t) => t.id === id) : null;
+    kind = now ? now.kind : kind;
+    const cfg = (now && now.config) || {};
+    const at = (now && now.schedule && now.schedule.at) || '07:00';
+    const runs = `<label for="tkRun">Runs</label><select id="tkRun"><option value="day" ${!now || now.schedule.every !== 'manual' ? 'selected' : ''}>Every morning</option><option value="manual" ${now && now.schedule.every === 'manual' ? 'selected' : ''}>Only when I run it</option></select>
+      <label for="tkAt">At</label><input id="tkAt" type="time" value="${esc(at)}">`;
+    let body, collect;
+    if (kind === 'time_activities') {
+      body = `<label for="tkName">Name</label><input id="tkName" value="${esc(now ? now.name : 'Post hours as time activities')}">
+        <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="tkApproved" style="width:auto" ${cfg.only_approved === false ? '' : 'checked'}> Only days a manager approved</label>
+        <label for="tkDesc">Description on each time activity</label><input id="tkDesc" value="${esc(cfg.description || 'Attendance · {first_in} – {last_out}')}">
+        <div class="hint">Put in: {name} {day} {first_in} {last_out} {hours} {minutes}</div>
+        <label for="tkBill">Billable</label><select id="tkBill"><option value="NotBillable" ${cfg.billable !== 'Billable' ? 'selected' : ''}>Not billable</option><option value="Billable" ${cfg.billable === 'Billable' ? 'selected' : ''}>Billable</option></select>
+        <label for="tkBack">Each run looks back</label><select id="tkBack">${[7, 14, 31, 62].map((n) => `<option value="${n}" ${Number(cfg.look_back_days || 14) === n ? 'selected' : ''}>${n} days</option>`).join('')}</select>
+        ${runs}`;
+      collect = (d) => ({ name: d.querySelector('#tkName').value, config: { only_approved: d.querySelector('#tkApproved').checked,
+        description: d.querySelector('#tkDesc').value, billable: d.querySelector('#tkBill').value, look_back_days: Number(d.querySelector('#tkBack').value) } });
+    } else {
+      if (!AP.setup || AP.setup.failed) await refresh('setup');
+      const scheds = (AP.setup.schedules || []).filter((x) => x.status === 'CONFIRMED');
+      if (!scheds.length) { say('Add a pay period first, on the Pay tab'); AP.sub = 'pay'; render(); return; }
+      if (!AP.accounts) {
+        try { AP.accounts = (await call('qb_accounts')).accounts; } catch (e) { say(e.message); return; }
+      }
+      const opt = (sel, filter) => AP.accounts.filter(filter).map((x) => `<option value="${esc(x.id)}" data-name="${esc(x.name)}" ${sel && sel.value === x.id ? 'selected' : ''}>${esc(x.name)} · ${esc(x.type)}</option>`).join('');
+      body = `<label for="tkName">Name</label><input id="tkName" value="${esc(now ? now.name : 'Post wages as a journal entry')}">
+        <label for="tkSched">Pay period</label><select id="tkSched">${scheds.map((x) => `<option value="${x.id}" ${cfg.schedule_id === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        <label for="tkDebit">Wages go to (expense)</label><select id="tkDebit"><option value="">Choose…</option>${opt(cfg.debit_account, (x) => /expense|cost/i.test(x.type))}</select>
+        <label for="tkCredit">Owed from (liability or bank)</label><select id="tkCredit"><option value="">Choose…</option>${opt(cfg.credit_account, (x) => /liabilit|bank|payable/i.test(x.type))}</select>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="tkLines" style="width:auto" ${cfg.one_line_per_person === false ? '' : 'checked'}> One line per person</label>
+        <label for="tkWait">Bring it in</label><select id="tkWait">${[0, 1, 2, 3, 5, 7].map((n) => `<option value="${n}" ${Number(cfg.wait_days == null ? 1 : cfg.wait_days) === n ? 'selected' : ''}>${n ? n + ' day' + (n > 1 ? 's' : '') + ' after the period ends' : 'the day after it ends'}</option>`).join('')}</select>
+        <label for="tkMemo">Memo</label><input id="tkMemo" value="${esc(cfg.memo || 'Wages {start} – {end}')}">
+        ${runs}`;
+      collect = (d) => {
+        const acct = (sel) => { const o = sel.selectedOptions[0]; return o && o.value ? { value: o.value, name: o.dataset.name } : null; };
+        return { name: d.querySelector('#tkName').value, config: { schedule_id: d.querySelector('#tkSched').value,
+          debit_account: acct(d.querySelector('#tkDebit')), credit_account: acct(d.querySelector('#tkCredit')),
+          one_line_per_person: d.querySelector('#tkLines').checked, wait_days: Number(d.querySelector('#tkWait').value),
+          memo: d.querySelector('#tkMemo').value } };
+      };
+    }
+    return dialog({
+      title: now ? `Edit “${now.name}”` : (kind === 'time_activities' ? 'Post hours as time activities' : 'Post wages as a journal entry'),
+      ok: now ? 'Save' : 'Save task',
+      sub: 'A task reads Attendance and brings items in for you to post. It never posts by itself.',
+      body,
+      validate: (d) => (kind === 'wage_journal' && (!d.querySelector('#tkDebit').value || !d.querySelector('#tkCredit').value)) ? 'accounts' : null,
+      collect: (d) => Object.assign(collect(d), { schedule: { every: d.querySelector('#tkRun').value, at: d.querySelector('#tkAt').value || '07:00' } }),
+      submit: (v) => call('qb_tasks', { app: AP.app, action: 'save', id: id || undefined, kind, name: v.name, config: v.config, schedule: v.schedule }),
+    }).then(async (ok) => {
+      if (!ok) return;
+      say(now ? 'Task saved' : 'Task saved — run it now to see what it brings in');
+      await refresh('over');
+    });
+  }
+  function postDialog(taskId) {
+    const items = AP.review.items.filter((i) => i.task && i.task.id === taskId && i.status === 'REVIEW' && AP.open['pick:' + i.id] !== false);
+    const money = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+    return dialog({
+      title: `Post ${plural(items.length, items[0].kind, items[0].kind.replace(/y$/, 'ie') + 's')} to QuickBooks?`, ok: `Post ${items.length}`,
+      sub: `Each is sent to QuickBooks and read back to check it landed. You confirm it now; if your company’s rules need a second approver, it waits in Approvals.`,
+      body: `<div class="facts">${items.slice(0, 30).map((i) => `<div class="fact"><span style="color:var(--label)">${esc(i.title)}</span><span>${esc(i.detail || '')}</span></div>`).join('')}
+        ${items.length > 30 ? `<div class="fact"><span>…and ${items.length - 30} more</span><span></span></div>` : ''}
+        ${money ? `<div class="fact amt"><span>Total</span><span>${cash(money)}</span></div>` : ''}</div>`,
+      submit: async () => {
+        const r = await call('qb_review', { app: AP.app, action: 'post', ids: items.map((i) => i.id) });
+        if (r.refused && r.refused.length && !r.posted.length) throw new Error(r.refused[0].error);
+        AP.lastPost = r;
+      },
+    }).then(async (ok) => {
+      if (!ok) return;
+      const r = AP.lastPost || { posted: [], refused: [] };
+      say(`${plural(r.posted.length, 'item')} sent to QuickBooks${r.refused.length ? ` · ${r.refused.length} refused: ${r.refused[0].error}` : ''}`);
+      await refresh('over', 'review', 'posted');
+      setTimeout(() => refresh('over', 'review', 'posted'), 5000);
+    });
+  }
+  function excludeDialog(id) {
+    const it = AP.review.items.find((i) => i.id === id);
+    return dialog({
+      title: `Exclude ${it.title}?`, ok: 'Exclude',
+      sub: 'It won’t be posted, and no task brings it back. You can bring it back from Posted.',
+      body: '<label for="exWhy">Why (so the team knows)</label><textarea id="exWhy" rows="2" maxlength="300" placeholder="e.g. Training day, not paid"></textarea>',
+      validate: (d) => d.querySelector('#exWhy').value.trim().length >= 3 ? null : 'why',
+      collect: (d) => ({ why: d.querySelector('#exWhy').value.trim() }),
+      submit: (v) => call('qb_review', { app: AP.app, action: 'exclude', ids: [id], reason: v.why }),
+    }).then((ok) => { if (ok) { say('Excluded'); return refresh('over', 'review', 'posted'); } });
+  }
+  function addDialog(ref) {
+    const r = AP.people.people.find((x) => x.ref === ref);
+    const parts = (r.name || '').split(' ');
+    return dialog({
+      title: `Add ${r.name} to QuickBooks?`, ok: 'Add to QuickBooks',
+      sub: 'QuickBooks gets a new employee with just these details — no pay, tax or bank details are ever sent from Eesa.',
+      body: `<label for="adGiven">First name</label><input id="adGiven" value="${esc(parts[0] || '')}">
+        <label for="adFamily">Last name</label><input id="adFamily" value="${esc(parts.slice(1).join(' '))}">
+        <label for="adEmail">Email</label><input id="adEmail" value="${esc(r.email || '')}">`,
+      validate: (d) => d.querySelector('#adGiven').value.trim() ? null : 'name',
+      collect: (d) => ({ given_name: d.querySelector('#adGiven').value.trim(), family_name: d.querySelector('#adFamily').value.trim(), email: d.querySelector('#adEmail').value.trim() }),
+      submit: (v) => call('qb_people_decide', Object.assign({ app: AP.app, ref, action: 'add',
+        display_name: [v.given_name, v.family_name].filter(Boolean).join(' ') }, v)),
+    }).then((ok) => { if (ok) { say(`Sent — ${r.name} is matched as soon as QuickBooks has them`); refresh('over', 'people'); setTimeout(() => refresh('people'), 6000); } });
+  }
+  function leaveDialog(ref) {
+    const r = AP.people.people.find((x) => x.ref === ref);
+    return dialog({
+      title: `Leave ${r.name} out of QuickBooks?`, ok: 'Leave out',
+      sub: 'Nothing is posted for them — their hours stay in Attendance only. You can undo it.',
+      body: '<label for="lvWhy">Why</label><input id="lvWhy" placeholder="e.g. Owner — not on payroll">',
+      collect: (d) => ({ reason: d.querySelector('#lvWhy').value.trim() }),
+      submit: (v) => call('qb_people_decide', { app: AP.app, ref, action: 'leave_out', reason: v.reason }),
+    }).then((ok) => { if (ok) { say('Left out'); return refresh('over', 'people'); } });
+  }
+
+  // ── drawing, and what a click means ─────────────────────────────────────
+  function render() {
+    const body = document.getElementById('appsBody'); if (!body) return;
+    const keepFocus = document.activeElement && document.activeElement.id === 'apAsk' ? document.activeElement.value : null;
+    body.innerHTML = AP.screen === 'app' ? appView() : homeView();
+    if (keepFocus !== null && $a('#apAsk') && !$a('#apAsk').disabled) { $a('#apAsk').value = keepFocus; $a('#apAsk').focus(); }
+    badge();
+  }
+  async function decide(ref, action, extra) {
+    try {
+      await call('qb_people_decide', Object.assign({ app: AP.app, ref, action }, extra || {}));
+      say({ confirm: 'Confirmed', choose: 'Matched', unmatch: 'Unmatched — Eesa suggests again', leave_out: 'Left out' }[action] || 'Done');
+    } catch (e) { say(e.message); }
+    await refresh('over', 'people');
+  }
+  async function onClick(ev) {
     const el = ev.target.closest('button'); if (!el || el.disabled) return;
-    const d = el.dataset; const b = S.b;
-    if (d.apv === 'morning') return morning();
-    if (d.apv === 'framework') return frameworkDialog();
-    if (d.apv === 'reset') { S = fresh(); render(); toTop(); return say('Back to the start'); }
+    const d = el.dataset;
     if (d.open) {
-      if (!S.connected[d.open]) return isAdmin(ME()) ? connectDialog(d.open) : say('Only a QuickBooks admin can connect apps');
-      S.screen = { name: 'app', app: d.open }; S.sub = d.go || 'tasks'; render(); return toTop();
+      const a = AP.over.apps.find((x) => x.key === d.open);
+      if (!a.connected) return viewer().can_connect ? connectDialog(d.open) : say('Only a QuickBooks admin connects apps');
+      AP.screen = 'app'; AP.app = d.open; AP.sub = d.go || AP.sub || 'review';
+      render();
+      return refresh('people', 'review', ...(viewer().sees_pay ? ['setup'] : []));
     }
-    if ('home' in d) { S.screen = { name: 'home' }; return render(); }
-    if (d.sub) { S.sub = d.sub; return render(); }
-    if (d.disconnect) return disconnectDialog(d.disconnect);
-    if (d.newtask) return d.newtask === 'ask' ? askIn(EXAMPLES[d.app].ask) : startBuild(d.newtask, d.app);
-    if (d.run) { const n = runTask(task(d.run), 'Just now'); render(); return say(n ? `The assistant ran it: ${n} new` : 'The assistant ran it: nothing new'); }
-    if (d.edit) return startBuild(task(d.edit).type, task(d.edit).app, task(d.edit));
-    if (d.toggle) { const t = task(d.toggle); t.on = !t.on; render(); return say(t.on ? 'Task on' : 'Task off'); }
-    if (d.takeover) { const t = task(d.takeover); t.owner = ME().who; render(); return say(`You now own “${t.name}”`); }
-    if (d.post) return postDialog(d.post);
-    if (d.exclude) return excludeDialog(d.exclude);
-    if (d.seen) { S.alerts.filter((x) => x.id === d.seen)[0].seen = true; return render(); }
-    if (d.askwhy) return askIn(`Why is this: ${S.alerts.filter((x) => x.id === d.askwhy)[0].text}?`);
-    if (d.undo) { S.posted.filter((p) => p.key === d.undo)[0].undo = true; render(); return say('Undo asked. In the real app this goes to Approvals, and an approver deletes it in QuickBooks.'); }
-    if (d.bringback) { const x = S.excluded.filter((e) => e.key === d.bringback)[0]; S.excluded = S.excluded.filter((e) => e !== x); S.review.push(x); render(); return say('Back in For review'); }
-    if (d.confirm) { S.matches[d.confirm] = d.confirm; render(); return say('Matched'); }
-    if (!b) return;
-    if ('cancelbuild' in d) { S.b = null; S.screen = { name: 'app', app: b.app }; S.sub = 'tasks'; render(); return toTop(); }
-    if (d.pickds) {
-      const ds = dataset(b.app, d.pickds); b.source = d.pickds;
-      b.conds = ds.cols.some((c) => c[0] === 'approval') ? [['open', 'is', 'no'], ['approval', 'is', 'approved']] : [];
-      if (b.action) b.map = suggest(ds, act(b.action));
-      b.compare = !!COMPARE[d.pickds]; b.cond = null; return render();
+    if ('home' in d) { AP.screen = 'home'; render(); return refresh('over'); }
+    if (d.sub) { AP.sub = d.sub; render(); return subLoad(); }
+    if (d.goSub) { AP.sub = d.goSub; if (d.filter) AP.filter = d.filter; render(); return subLoad(); }
+    if (d.filter && el.classList.contains('ap-chip')) { AP.filter = d.filter; return render(); }
+    const act = d.act;
+    if (act === 'retry') return refresh(d.what);
+    if (act === 'approvals') return show('approvals');
+    if (act === 'confirm') return decide(d.ref, 'confirm');
+    if (act === 'unmatch') return decide(d.ref, 'unmatch');
+    if (act === 'leave') return leaveDialog(d.ref);
+    if (act === 'add') return addDialog(d.ref);
+    if (act === 'pay') return payDialog(d.ref);
+    if (act === 'edit-schedule') return scheduleDialog(d.id);
+    if (act === 'edit-rule') return ruleDialog(d.id);
+    if (act === 'confirm-draft' || act === 'discard-draft') {
+      try { await call('qb_pay_save', { what: d.what, action: act === 'confirm-draft' ? 'confirm' : 'discard', id: d.id }); say(act === 'confirm-draft' ? 'Confirmed' : 'Discarded'); }
+      catch (e) { say(e.message); }
+      return refresh('over', 'people', 'setup', 'period');
     }
-    if (d.pickact) { b.action = d.pickact; b.map = suggest(dataset(b.app, b.source), act(d.pickact)); return render(); }
-    if (d.pickcond) { if (!b.cond || b.cond.kind !== d.pickcond) b.cond = { kind: d.pickcond, amount: d.pickcond === 'differs' ? 20 : 5000 }; return render(); }
-    if ('addcond' in d) { const ds = dataset(b.app, b.source); const c = ds.cols.filter((x) => x[2] === 'choice')[0] || ds.cols[0]; b.conds.push([c[0], 'is', String(ds.rows[0][c[0]])]); return render(); }
-    if (d.delcond) { b.conds.splice(Number(d.delcond), 1); return render(); }
-    if (d.addstep) { const p = d.addstep.split(':'); b.steps.push(p[0] === 'task' ? { kind: 'task', id: p[1] } : { kind: p[0] }); return render(); }
-    if (d.stepdel) { b.steps.splice(Number(d.stepdel), 1); return render(); }
-    if (d.stepup) { const i = Number(d.stepup); const s = b.steps; const x = s[i - 1]; s[i - 1] = s[i]; s[i] = x; return render(); }
-    if (d.step !== undefined) { b.step = Number(d.step); render(); return toTop(); }
-    if ('next' in d) { b.step += 1; render(); return toTop(); }
-    if ('stepback' in d) { b.step -= 1; render(); return toTop(); }
-    if ('save' in d) return saveBuild();
+    if (act === 'days') { AP.open['days:' + d.ref] = !AP.open['days:' + d.ref]; return render(); }
+    if (act === 'new-task') return taskDialog(d.kind);
+    if (act === 'edit-task') return taskDialog(null, d.id);
+    if (act === 'run') {
+      el.disabled = true; el.textContent = 'Running…';
+      try { const r = await call('qb_tasks', { app: AP.app, action: 'run', id: d.id }); say(`Brought in ${r.run.ready || 0} · ${r.run.waiting || 0} waiting`); }
+      catch (e) { say(e.message); }
+      return refresh('over', 'review');
+    }
+    if (act === 'toggle') { try { await call('qb_tasks', { app: AP.app, action: 'toggle', id: d.id }); } catch (e) { say(e.message); } return refresh('over'); }
+    if (act === 'delete-task') {
+      const ok = await dialog({ title: 'Delete this task?', ok: 'Delete', danger: true, sub: 'What it already brought in stays as it is.', submit: () => call('qb_tasks', { app: AP.app, action: 'delete', id: d.id }) });
+      if (ok) { say('Deleted'); return refresh('over'); }
+      return;
+    }
+    if (act === 'post') return postDialog(d.task);
+    if (act === 'exclude') return excludeDialog(d.id);
+    if (act === 'bring-back') { try { await call('qb_review', { app: AP.app, action: 'bring_back', ids: [d.id] }); say('Brought back — checked again on the next run'); } catch (e) { say(e.message); } return refresh('over', 'review', 'posted'); }
+    if (act === 'assist') return assist(d.where);
+    if (act === 'disconnect') {
+      const a = spec();
+      const ok = await dialog({ title: `Disconnect ${a.name}?`, ok: 'Disconnect', danger: true,
+        sub: 'QuickBooks stops reading it and its tasks turn off. Everything already posted stays in QuickBooks.',
+        submit: () => call('qb_app_connect', { app: a.key, action: 'disconnect' }) });
+      if (ok) { AP.screen = 'home'; say('Disconnected — its tasks are off'); return refresh('over'); }
+    }
   }
-  function onChange(ev) {
-    const t = ev.target; const d = t.dataset;
-    if (t.id === 'apPerson') { S.person = t.value; if (S.b) { S.screen = { name: 'app', app: S.b.app }; S.b = null; } render(); return; }
-    if (d.match) {
-      if (t.value === '__add') { t.value = ''; say('In the real app this asks an approver to add them to QuickBooks.'); return; }
-      if (t.value) { S.matches[d.match] = t.value; render(); say('Matched'); } return;
-    }
-    if (d.pick) { S.picked[d.pick] = t.checked; render(); return; }
-    const b = S.b; if (!b) return;
-    if (d.cond !== undefined) {
-      const i = Number(d.cond); b.conds[i][Number(d.part)] = t.value;
-      if (d.part === '0') { const r = dataset(b.app, b.source).rows[0]; b.conds[i][2] = String(r[t.value] == null ? '' : r[t.value]); }
-      return render();
-    }
-    if (d.how) {
-      const p = t.value.split(':'); const ds = dataset(b.app, b.source); const f = act(b.action).fields.filter((x) => x[0] === d.how)[0];
-      b.map[d.how] = (p[0] === 'col' || p[0] === 'match') ? { how: p[0], col: p[1] } : p[0] === 'table' ? { how: 'table', col: p[1], table: remembered(p[1]) }
-        : p[0] === 'fixed' ? { how: 'fixed', value: f[4] || (QB[f[2]] || [f[2] === 'yesno' ? 'No' : ''])[0] }
-        : p[0] === 'words' ? { how: 'words', text: `{${ds.cols[0][1]}}` } : { how: 'empty' };
-      return render();
-    }
-    if (d.fixed) { b.map[d.fixed].value = t.value; return render(); }
-    if (d.tablek) { const m = b.map[d.tablek]; m.table = m.table || {}; if (t.value) m.table[d.tablev] = t.value; else delete m.table[d.tablev]; return render(); }
-    if (d.tellwho) { const w = b.tell.who; if (t.checked) w.push(d.tellwho); else w.splice(w.indexOf(d.tellwho), 1); return render(); }
-    if (d.tellhow) { const w = b.tell.how; if (t.checked) w.push(d.tellhow); else w.splice(w.indexOf(d.tellhow), 1); return; }
-    if (t.id === 'apWhen') b.when = t.value;
-    if (t.id === 'apOften') b.tell.often = t.value;
-    if (t.id === 'apCmp') { b.compare = t.checked; if (!b.compare && b.cond && b.cond.kind === 'differs') b.cond = null; }
+  function subLoad() {
+    const need = { review: ['review'], people: ['people'], pay: ['setup', 'people', 'period'], tasks: ['over'], posted: ['posted'], shared: [] }[AP.sub] || [];
+    return need.length ? refresh(...need) : null;
   }
-  let wordsTimer = null;
-  function onInput(ev) {
-    const t = ev.target; const b = S && S.b; if (!b) return;
-    if (t.id === 'apName') { b.name = t.value; b.named = true; }
-    if (t.id === 'apAmt' && b.cond) b.cond.amount = Number(t.value) || 0;
-    if (t.dataset.fixed && t.tagName === 'INPUT') b.map[t.dataset.fixed].value = t.value;
-    if (t.dataset.words) {
-      const k = t.dataset.words; b.map[k].text = t.value; clearTimeout(wordsTimer);
-      wordsTimer = setTimeout(() => {
-        const at = t.selectionStart; render();
-        const again = document.querySelector(`[data-words="${k}"]`); if (again) { again.focus(); again.setSelectionRange(at, at); }
-      }, 450);
+  async function onChange(ev) {
+    const t = ev.target, d = t.dataset;
+    if (d.pick) { AP.open['pick:' + d.pick] = t.checked; return render(); }
+    if (d.choose) {
+      const e = (AP.people.employees || []).find((x) => x.id === t.value);
+      if (e) return decide(d.choose, 'choose', { quickbooks_id: e.id, quickbooks_name: e.name });
     }
+    if (d.period) {
+      AP.periodPick[d.period] = t.value;
+      if (d.period === 'schedule') AP.periodPick.start = '';
+      AP.period = null; render(); return refresh('period');
+    }
+  }
+  function onToggle(ev) {
+    const t = ev.target;
+    if (t.tagName === 'DETAILS' && t.dataset.keep) AP.open[t.dataset.keep] = t.open;
+  }
+  function onKey(ev) {
+    if (ev.key === 'Enter' && ev.target.id === 'apAsk') { const b = document.querySelector('[data-act="assist"]'); if (b) b.click(); }
   }
 
   let wired = false;
   window.openApps = function () {
-    if (!window.appsPreviewFor(ACCESS)) return;
-    if (!S) { PEOPLE = people(); S = fresh(); }
+    if (!window.appsVisibleFor(ACCESS)) return;
     if (!wired) {
       const root = document.getElementById('tab-apps');
-      root.addEventListener('click', onClick); root.addEventListener('change', onChange); root.addEventListener('input', onInput);
+      root.addEventListener('click', onClick); root.addEventListener('change', onChange);
+      root.addEventListener('toggle', onToggle, true); root.addEventListener('keydown', onKey);
       wired = true;
     }
     render();
+    refresh('over', ...(AP.screen === 'app' ? ['people', 'review'] : []));
   };
-  // If the session arrived before this script ran, boot() could not reveal the tab.
-  if (typeof ACCESS !== 'undefined' && ACCESS) document.getElementById('appsTab').hidden = !window.appsPreviewFor(ACCESS);
+  // The badge on the tab, without opening it: what is ready for this person.
+  window.appsBadge = function () {
+    if (!window.appsVisibleFor(ACCESS)) return;
+    call('qb_apps').then((o) => { AP.over = o; badge(); }).catch(() => {});
+  };
+  if (typeof ACCESS !== 'undefined' && ACCESS) document.getElementById('appsTab').hidden = !window.appsVisibleFor(ACCESS);
 })();
 </script>
 </body>
