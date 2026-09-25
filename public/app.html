@@ -413,6 +413,8 @@
   .dlg .ap-steprow input.pick { width: auto; padding: 6px 8px; }
   .dlg select { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--sep); border-radius: 9px; background: var(--bg); color: var(--label); }
   .dlg .ap-chips { margin-top: 4px; }
+  .dlg .btn.link { border: 0; background: transparent; color: var(--qb); font-weight: 600; padding: 4px 2px; }
+  .ap-acts select.pick { max-width: 210px; }
   .ap-rule-read { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--qb-soft); font-size: 14px; font-weight: 600; }
   .ap-toast { position: fixed; left: 50%; bottom: calc(22px + var(--safe)); transform: translateX(-50%); background: var(--label); color: var(--bg);
               padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 600; z-index: 60;
@@ -1923,10 +1925,15 @@ async function boot() {
     const t = parts.join('; ') + ((r.weekly || []).length || (r.seventh_day && r.seventh_day.on) ? ` (weeks start on ${WEEK[r.week_starts || 0]})` : '');
     return t[0].toUpperCase() + t.slice(1) + '.';
   }
+  // One step: "After [8] h → [1.5] ×". The section heading says which clock.
+  function stepRow(kind, t) {
+    return `<div class="ap-steprow" data-kind="${kind}">After <input class="pick" data-f="after" inputmode="decimal" value="${t.after}" style="width:58px" aria-label="After how many hours ${kind === 'daily' ? 'in a day' : 'in a week'}"> h →
+      <input class="pick" data-f="times" inputmode="decimal" value="${t.times}" style="width:52px" aria-label="Paid at"> × <button type="button" class="btn link" data-rm="1">Remove</button></div>`;
+  }
   function ruleDialog(id) {
     const now = id ? AP.setup.rules.find((x) => x.id === id) : null;
     const start = now ? now.rule : { week_starts: 0, daily: [], weekly: [], seventh_day: { on: false } };
-    const steps = (kind, list) => list.map((t, i) => `<div class="ap-steprow" data-kind="${kind}">After <input class="pick" data-f="after" inputmode="decimal" value="${t.after}" style="width:64px"> hours ${kind === 'daily' ? 'in a day' : 'in a week'} → <input class="pick" data-f="times" inputmode="decimal" value="${t.times}" style="width:56px"> × <button type="button" class="btn link" data-rm="${kind}:${i}">Remove</button></div>`).join('');
+    const steps = (kind, list) => list.map((t) => stepRow(kind, t)).join('');
     const opened = dialog({
       title: now ? `Edit “${now.name}”` : 'Add an overtime rule', ok: 'Save rule',
       sub: 'Your rule, in your numbers. Start from a shape, then change anything.',
@@ -1956,7 +1963,7 @@ async function boot() {
   }
   function wireRuleDialog() {
     const d = lastDialog(); if (!d || !d.querySelector('#ruDaily')) return;
-    const row = (kind, t) => `<div class="ap-steprow" data-kind="${kind}">After <input class="pick" data-f="after" inputmode="decimal" value="${t.after}" style="width:64px"> hours ${kind === 'daily' ? 'in a day' : 'in a week'} → <input class="pick" data-f="times" inputmode="decimal" value="${t.times}" style="width:56px"> × <button type="button" class="btn link" data-rm="x">Remove</button></div>`;
+    const row = stepRow;
     const sync = () => { d.querySelector('#ru7box').hidden = !d.querySelector('#ru7').checked; d.querySelector('#ruRead').textContent = 'Reads: ' + ruleWords(readRule(d)); };
     const fill = (r) => {
       d.querySelector('#ruDaily').innerHTML = (r.daily || []).map((t) => row('daily', t)).join('');
