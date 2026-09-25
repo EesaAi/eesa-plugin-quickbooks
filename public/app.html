@@ -618,8 +618,11 @@ async function loadNeeds() {
       .catch(function (e) { ST.errors.changes = e.message; }),
     ACCESS && ACCESS.has_access ? call('qb_apps', {}).then(function (r) { ST.apps = r; delete ST.errors.apps; })
       .catch(function (e) { ST.errors.apps = e.message; }) : null,
-    platform('agent_activity', { plugin: 'quickbooks', limit: 6 }).then(function (r) { ST.activity = r.ok ? r.actions || [] : []; })
-      .catch(function () { ST.activity = []; }),
+    // What was DONE: changes in QuickBooks. The log also holds every read —
+    // this page's own brief among them — which would bury the few that matter.
+    platform('agent_activity', { plugin: 'quickbooks', limit: 60 }).then(function (r) {
+      ST.activity = (r.ok ? r.actions || [] : []).filter(function (a) { return a.kind === 'write'; });
+    }).catch(function () { ST.activity = []; }),
   ]);
   paintNow();
   var v = viewer(), conn = connected();
