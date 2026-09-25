@@ -4,272 +4,278 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>QuickBooks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
-  QuickBooks in Eesa — one chat, run by agents.
+  QuickBooks in Eesa — Eesa's chat, for the QuickBooks agent only.
 
   THE SHAPE (Eesa's rule since 2026-09-25: the interface is agentic)
-    A chat with its history down the side. You say what you want — typed or
-    spoken — and the QuickBooks agent does it: it answers from the books, and
-    hands setup ("add Alex, $18 an hour", "post this week's hours") to the
-    attendance assistant, whose draft a checker reviews. Every request is a
-    FLOW in the conversation that asked for it: a card with its log — who
-    did what, when — and the one decision it needs from you. Every answer
-    carries what the agent did to reach it. "Needs you" gathers every flow
-    waiting on you, from any conversation. No tabs, menus or settings screens.
+    The same chat as Eesa's own: the chats down the side, the conversation,
+    one box to type or speak. Everything said goes to the QuickBooks agent,
+    which answers from the books and hands setup ("add Alex, $18 an hour")
+    to the attendance assistant. A request is a card in the conversation that
+    asked for it, with its log and the one decision it needs; each answer
+    carries the steps the agent took. Anything waiting on the person from
+    elsewhere sits at the top of the chats, as "Waiting on you".
 
   NO CREDENTIAL EVER REACHES THIS PAGE
     1. The Eesa shell posts { type:'eesa:session', token, theme, apiBase }.
     2. Every call goes to POST {eesa}/api/v1/gateway/plugin-ui-invoke/ with
        that short-lived token. Eesa checks the person's recorded QuickBooks
        role, injects this plugin's key server-side, and proxies the call.
-    3. So a "Reports only" person sees exactly what "Reports only" covers. The
-       page asks for the role FIRST and only asks for what it covers.
+    3. The page asks for the role FIRST and only asks for what it covers.
 
   THE ARGUMENT ENVELOPE IS NOT WHAT IT LOOKS LIKE
-    Intuit's tools take { params: {...} }, not the arguments directly. Eesa's
-    OWN tools are the opposite and take plain arguments. Two call paths below,
-    invoke() and platform(), deliberately. Do not merge them.
+    Intuit's tools take { params: {...} }; Eesa's own take plain arguments.
+    Two call paths below, invoke() and platform(), deliberately.
 
   THIS REPOSITORY IS PUBLIC — no real names, emails or figures in this file.
 -->
 <style>
-  /* Apple's grouped surfaces with Intuit's green as the one accent. */
+  /* Eesa's own tokens (Tool-Flow-Frontend globals.css), so this reads as
+     Eesa's chat, not a page inside it. */
   :root {
-    --qb: #2CA01C; --qb-press: #108000; --qb-soft: rgba(44,160,28,.10);
-    --bg: #F2F2F7; --side: #EAEAEF; --group: #FFFFFF; --raised: #FFFFFF;
-    --label: #1C1C1E; --label2: #6C6C70; --label3: #8E8E93;
-    --sep: #D9D9DE; --fill: #E5E5EA;
-    --in: #1B8A3E; --out: #C4351C; --warn: #B25000; --mind: #6E56CF;
-    --r: 16px;
-    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 14px rgba(0,0,0,.035);
+    --bg: oklch(0.99 0 0); --fg: oklch(0.16 0.012 240); --card: oklch(1 0 0);
+    --primary: oklch(0.50 0.20 270); --on-primary: oklch(0.99 0 0);
+    --muted: oklch(0.97 0.005 240); --muted-fg: oklch(0.50 0.012 240);
+    --border: oklch(0.92 0.005 240); --danger: oklch(0.58 0.22 27);
+    --ok: oklch(0.56 0.15 150); --warn: oklch(0.62 0.16 65);
+    --qb: #2CA01C;
     --safe: env(safe-area-inset-bottom, 0px);
   }
   :root[data-theme="dark"] {
-    --qb: #35C22B; --qb-press: #2CA01C; --qb-soft: rgba(53,194,43,.16);
-    --bg: #000000; --side: #0E0E10; --group: #1C1C1E; --raised: #2C2C2E;
-    --label: #FFFFFF; --label2: #AEAEB2; --label3: #8E8E93;
-    --sep: #38383A; --fill: #2C2C2E;
-    --in: #32D74B; --out: #FF6961; --warn: #FF9F0A; --mind: #A48BFF;
-    --shadow: none;
+    --bg: oklch(0.155 0.008 240); --fg: oklch(0.97 0.003 240); --card: oklch(0.195 0.008 240);
+    --primary: oklch(0.62 0.19 259); --on-primary: oklch(0.99 0 0);
+    --muted: oklch(0.225 0.008 240); --muted-fg: oklch(0.66 0.012 240);
+    --border: oklch(0.255 0.008 240); --ok: oklch(0.72 0.15 150); --warn: oklch(0.78 0.14 75);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--label); overflow: hidden;
-         font: 17px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  body { margin: 0; background: var(--bg); color: var(--fg); overflow: hidden;
+         font: 14px/1.6 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
          -webkit-font-smoothing: antialiased; }
   button, input, textarea { font: inherit; color: inherit; }
   [hidden] { display: none !important; }
+  svg { flex: none; }
 
-  /* ── the shell: history down the side, the chat beside it ── */
-  .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); height: 100%; }
-  .side { background: var(--side); border-right: 1px solid var(--sep); display: flex; flex-direction: column;
-          padding: 12px 10px calc(10px + var(--safe)); min-height: 0; }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; }
-  .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--qb); color: #fff; flex: none;
-          display: grid; place-items: center; font-weight: 800; font-size: 14px; letter-spacing: -.03em; }
-  .co { font-size: 16px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sbtn { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; cursor: pointer;
-          text-align: left; padding: 9px 10px; border-radius: 10px; font-size: 15px; color: var(--label); }
-  .sbtn:hover { background: var(--fill); }
-  .sbtn.on { background: var(--group); box-shadow: var(--shadow); font-weight: 600; }
-  .sbtn.new { border: 1px solid var(--sep); background: var(--group); font-weight: 600; margin-bottom: 6px; }
-  .sbtn .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .badge { background: var(--qb); color: #fff; border-radius: 999px; font-size: 11.5px; font-weight: 700; min-width: 20px;
-       height: 20px; padding: 0 6px; display: inline-grid; place-items: center; }
-  .convs { flex: 1; overflow-y: auto; margin: 6px -4px 0; padding: 0 4px; }
-  .glab { font-size: 12px; font-weight: 650; color: var(--label3); text-transform: uppercase; letter-spacing: .05em;
-          margin: 14px 10px 4px; }
-  .me { margin-top: 8px; border-top: 1px solid var(--sep); padding-top: 8px; }
-  .avatar { width: 30px; height: 30px; border-radius: 999px; background: var(--fill); display: grid; place-items: center;
-            font-size: 13px; font-weight: 700; flex: none; }
-  .me small { display: block; font-size: 12px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* ── the chats, and the conversation beside them ── */
+  .shell { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: 100%; }
+  .side { display: flex; flex-direction: column; min-height: 0; padding: 12px 10px calc(10px + var(--safe));
+          border-right: 1px solid var(--border); background: var(--bg); }
+  .side-top { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 10px; }
+  .side-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-fg); }
+  .new { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 34px; border: 0;
+         border-radius: 8px; background: var(--primary); color: var(--on-primary); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .new:hover { filter: brightness(1.06); }
+  .convs { flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
+  .conv { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; cursor: pointer; padding: 9px 10px;
+          border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+  .conv:hover { border-color: color-mix(in oklch, var(--primary) 35%, var(--border)); }
+  .conv.on { border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
+             background: color-mix(in oklch, var(--primary) 6%, var(--card)); }
+  .conv .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none;
+              background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); }
+  .conv .ic.wait { background: color-mix(in oklch, var(--warn) 16%, transparent); color: var(--warn); }
+  .conv .t { flex: 1; min-width: 0; }
+  .conv .t b { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conv .t small { display: block; font-size: 11.5px; color: var(--muted-fg); }
   .scrim { display: none; }
 
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
-  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--sep); min-height: 52px; }
-  .bar .title { flex: 1; min-width: 0; font-size: 16px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .icon { width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; cursor: pointer;
-          display: grid; place-items: center; color: var(--label); flex: none; }
-  .icon:hover { background: var(--fill); }
-  .icon svg { width: 22px; height: 22px; }
-  .menu { display: none; }
-  .scroll { flex: 1; overflow-y: auto; padding: 0 16px; -webkit-overflow-scrolling: touch; }
-  .col { max-width: 760px; margin: 0 auto; padding: 18px 0 28px; display: flex; flex-direction: column; gap: 12px; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); min-height: 56px; }
+  .bar .tt { flex: 1; min-width: 0; }
+  .bar h1 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -.01em; }
+  .bar .co { font-size: 12px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ghost { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 8px;
+           background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .ghost:hover { background: var(--muted); }
+  .menu { display: none; padding: 0 8px; }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px; }
+  .col { max-width: 780px; margin: 0 auto; padding: 20px 0 16px; display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
 
   @media (max-width: 899px) {
     .shell { grid-template-columns: minmax(0, 1fr); }
-    .side { position: fixed; z-index: 40; top: 0; bottom: 0; left: 0; width: min(86vw, 320px);
-            transform: translateX(-105%); transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.2); }
+    .side { position: fixed; z-index: 40; inset: 0 auto 0 0; width: min(86vw, 320px); transform: translateX(-105%);
+            transition: transform .22s ease; box-shadow: 0 0 40px rgba(0,0,0,.18); }
     .shell.open .side { transform: none; }
-    .shell.open .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.3); }
-    .menu { display: grid; }
+    .shell.open .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.28); }
+    .menu { display: inline-flex; }
+    .bar .newtxt { display: none; }
   }
 
-  /* ── the page speaks first ── */
-  .hello { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.025em; margin: 6px 0 4px; text-wrap: balance; }
-  .brief p { margin: 6px 0; }
-  .brief b { font-weight: 650; font-variant-numeric: tabular-nums; }
-  .quiet { color: var(--label2); font-size: 15px; }
-  .in { color: var(--in); } .out { color: var(--out); }
-  .skel { height: 13px; border-radius: 7px; background: var(--fill); margin: 10px 0; animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .45; } }
-  .h2 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+  /* ── an empty chat: Eesa's hero, and a few ways to start ── */
+  .empty { margin: auto; width: 100%; max-width: 560px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 0; text-align: center; }
+  .hero-ic { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center;
+             background: color-mix(in oklch, var(--primary) 10%, transparent); color: var(--primary);
+             box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 20%, transparent); }
+  .empty h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .starts { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+  .start { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 1px solid transparent;
+           border-radius: 12px; background: color-mix(in oklch, var(--muted) 45%, transparent); cursor: pointer; text-align: left; }
+  .start:hover { border-color: var(--border); background: var(--muted); }
+  .start .si { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--bg); color: var(--muted-fg); }
+  .start b { display: block; font-size: 13.5px; font-weight: 500; }
+  .start small { display: block; font-size: 11.5px; color: var(--muted-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .start .t { flex: 1; min-width: 0; }
 
-  /* ── what was asked, and what was answered ── */
-  .turn { max-width: 88%; }
-  .turn.me { align-self: flex-end; }
-  .bubble { background: var(--group); border-radius: 19px; padding: 11px 15px; box-shadow: var(--shadow); font-size: 16px; overflow-wrap: anywhere; }
-  .turn.me .bubble { background: var(--qb); color: #fff; }
+  /* ── messages, as Eesa draws them ── */
+  .row { display: flex; gap: 10px; align-items: flex-start; }
+  .row.me { justify-content: flex-end; }
+  .av { width: 32px; height: 32px; border-radius: 999px; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+        background: color-mix(in oklch, var(--primary) 15%, transparent); color: var(--primary);
+        box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 20%, transparent); }
+  .stack { min-width: 0; max-width: 85%; display: flex; flex-direction: column; gap: 6px; }
+  .bubble { border-radius: 16px; padding: 10px 14px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .row.me .bubble { background: var(--primary); color: var(--on-primary); border-top-right-radius: 4px; max-width: 85%; }
+  .row.ai .bubble { background: color-mix(in oklch, var(--muted) 60%, transparent); border-top-left-radius: 4px; overflow-x: auto; }
   .bubble > :first-child { margin-top: 0; } .bubble > :last-child { margin-bottom: 0; }
-  .bubble p { margin: 8px 0; } .bubble h3 { font-size: 15px; margin: 12px 0 6px; }
+  .bubble p { margin: 8px 0; } .bubble h3 { font-size: 14px; margin: 12px 0 6px; }
   .bubble ul { margin: 8px 0; padding-left: 20px; }
-  .bubble table { width: 100%; border-collapse: collapse; margin: 9px 0; font-size: 14px; }
-  .bubble th, .bubble td { padding: 6px 8px; border-bottom: 1px solid var(--sep); text-align: left; }
-  .bubble th { color: var(--label2); font-size: 12.5px; font-weight: 600; }
+  .bubble table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+  .bubble th, .bubble td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  .bubble th { color: var(--muted-fg); font-size: 12px; font-weight: 600; }
   .bubble td.n, .bubble th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .bubble code { background: var(--fill); border-radius: 5px; padding: 1px 5px; font-size: 14px; }
+  .bubble code { background: var(--muted); border-radius: 5px; padding: 1px 5px; font-size: 13px; }
   .scrollx { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .thinking { color: var(--label3); }
-  .working::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--qb);
+  .thinking { color: var(--muted-fg); }
+  .working::after { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 99px; background: var(--primary);
                     margin-left: 8px; vertical-align: middle; animation: pulse 1s infinite; }
-  details.did { margin: 6px 4px 0; font-size: 13.5px; color: var(--label2); }
-  details.did > summary { cursor: pointer; list-style: none; }
-  details.did > summary::-webkit-details-marker { display: none; }
-  details.did > summary::before { content: '▸ '; } details.did[open] > summary::before { content: '▾ '; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px; border: 0; border-radius: 7px;
+          background: transparent; color: var(--muted-fg); font-size: 12px; cursor: pointer; }
+  .chip:hover { background: var(--muted); color: var(--fg); }
+  .chip[aria-expanded="true"] svg.chev { transform: rotate(180deg); }
 
-  /* ── a flow: one request, its log, its one decision ── */
-  .flow { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; }
-  .fhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .kicker { font-size: 12.5px; font-weight: 650; color: var(--label3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
-  .flow h3 { margin: 0; font-size: 16.5px; line-height: 1.3; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
-  .amt { font-size: 24px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .say { margin: 6px 0 0; font-size: 15px; color: var(--label2); }
-  .ask { margin: 10px 0 0; font-size: 16px; }
-  .steps { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 5px; font-size: 15px; }
-  .lines { margin: 10px 0 0; border-top: 1px solid var(--sep); }
-  .line { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--sep); font-size: 14px; }
+  /* The steps an answer took, and a flow's log: one line per thing that happened. */
+  .log { list-style: none; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+         background: color-mix(in oklch, var(--muted) 30%, transparent); display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+  .log li { display: flex; gap: 8px; align-items: baseline; }
+  .log .dot { width: 7px; height: 7px; border-radius: 99px; background: var(--muted-fg); flex: none; transform: translateY(-1px); }
+  .log .person .dot { background: var(--primary); } .log .assistant .dot { background: oklch(0.6 0.18 300); }
+  .log .checker .dot { background: var(--warn); } .log .eesa .dot, .log .quickbooks .dot { background: var(--ok); }
+  .log .bad .dot { background: var(--danger); }
+  .log .next .dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--primary); }
+  .log b { font-weight: 600; }
+  .log .tx { flex: 1; min-width: 0; }
+  .log time { color: var(--muted-fg); font-size: 11px; white-space: nowrap; }
+
+  /* ── a flow: a request or a change, with its log and one decision ── */
+  .flow { border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow: hidden; }
+  .flow.wait { border-color: color-mix(in oklch, var(--warn) 45%, var(--border)); }
+  .fh { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px 0; }
+  .fh .fi { width: 20px; height: 20px; display: grid; place-items: center; color: var(--muted-fg); flex: none; margin-top: 1px; }
+  .flow.wait .fh .fi { color: var(--warn); } .flow.done .fh .fi { color: var(--ok); } .flow.bad .fh .fi { color: var(--danger); }
+  .fh .ft { flex: 1; min-width: 0; }
+  .fh b { display: block; font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+  .fh small { display: block; font-size: 12px; color: var(--muted-fg); }
+  .fh .amt { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .fb { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .steps { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+  .lines { border-top: 1px solid var(--border); }
+  .line { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .found { margin-top: 10px; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; background: var(--fill); }
-  .found.ok { background: rgba(27,138,62,.08); } .found.warn { background: rgba(178,80,0,.08); } .found.bad { background: rgba(196,53,28,.08); }
-  .found > b { display: block; margin-bottom: 4px; }
-  .found.ok > b { color: var(--in); } .found.warn > b { color: var(--warn); } .found.bad > b { color: var(--out); }
-  .f { display: flex; gap: 8px; margin-top: 3px; }
-  .f > span:first-child { width: 14px; flex: none; font-weight: 700; }
-  .f.ok > span:first-child { color: var(--in); } .f.warn > span:first-child { color: var(--warn); } .f.stop > span:first-child { color: var(--out); }
-  .f em { font-style: normal; font-size: 12px; color: var(--label3); margin-left: 4px; }
-  .strip { margin-top: 10px; border-radius: 10px; padding: 9px 12px; font-size: 14px; line-height: 1.4; }
-  .strip b { display: block; margin-bottom: 2px; }
-  .strip.bad { background: rgba(196,53,28,.08); color: var(--out); }
-  .strip.warn { background: rgba(178,80,0,.08); color: var(--warn); }
-
-  /* The log: who did what, when — a rail of dots, one per thing that happened. */
-  .log { list-style: none; margin: 12px 0 0; padding: 0 0 0 2px; font-size: 13.5px; color: var(--label2); }
-  .log li { position: relative; padding: 0 0 8px 18px; }
-  .log li::before { content: ''; position: absolute; left: 3px; top: 5px; width: 8px; height: 8px; border-radius: 99px; background: var(--label3); }
-  .log li::after { content: ''; position: absolute; left: 6.5px; top: 15px; bottom: -3px; width: 1px; background: var(--sep); }
-  .log li:last-child::after { display: none; }
-  .log li.person::before { background: var(--qb); } .log li.assistant::before { background: var(--mind); }
-  .log li.checker::before { background: var(--warn); } .log li.eesa::before, .log li.quickbooks::before { background: var(--in); }
-  .log li.bad::before { background: var(--out); }
-  .log li.next::before { background: transparent; border: 1.5px solid var(--qb); width: 7px; height: 7px; }
-  .log b { color: var(--label); font-weight: 600; }
-  .log time { color: var(--label3); font-size: 12px; margin-left: 4px; white-space: nowrap; }
-
-  .answer { display: flex; gap: 8px; margin-top: 10px; }
-  .answer input { flex: 1; min-width: 0; border: 1px solid var(--sep); border-radius: 12px; padding: 10px 12px; background: var(--bg); }
-  .actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .actions .meta { flex: 1 1 200px; text-align: left; }
-  .meta { font-size: 13px; color: var(--label2); margin-top: 2px; }
-  .btn { border: 1px solid var(--sep); background: var(--group); border-radius: 12px; padding: 9px 14px; cursor: pointer; font-size: 15px; line-height: 1.1; }
-  .btn.primary { background: var(--qb); border-color: var(--qb); color: #fff; font-weight: 650; }
-  .btn.primary:active { background: var(--qb-press); }
-  .btn.link { border: 0; background: transparent; color: var(--qb); font-weight: 600; padding: 6px 4px; }
-  .btn.danger { background: var(--out); border-color: transparent; color: #fff; }
+  .found { border-radius: 10px; padding: 9px 11px; font-size: 12.5px; background: var(--muted); }
+  .found.warn { background: color-mix(in oklch, var(--warn) 10%, transparent); }
+  .found.bad { background: color-mix(in oklch, var(--danger) 9%, transparent); }
+  .found.ok { background: color-mix(in oklch, var(--ok) 9%, transparent); }
+  .found > b { display: block; margin-bottom: 3px; font-weight: 600; }
+  .f { display: flex; gap: 7px; margin-top: 2px; }
+  .f > span:first-child { width: 12px; flex: none; font-weight: 700; }
+  .f.ok > span:first-child { color: var(--ok); } .f.warn > span:first-child { color: var(--warn); } .f.stop > span:first-child { color: var(--danger); }
+  .f em { font-style: normal; font-size: 11px; color: var(--muted-fg); margin-left: 3px; }
+  .strip { border-radius: 10px; padding: 8px 11px; font-size: 12.5px; }
+  .strip.bad { background: color-mix(in oklch, var(--danger) 9%, transparent); color: var(--danger); }
+  .strip.warn { background: color-mix(in oklch, var(--warn) 10%, transparent); }
+  .ask { margin: 0; font-size: 13.5px; }
+  .answer { display: flex; gap: 8px; }
+  .answer input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+  .actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .actions .meta { flex: 1 1 180px; text-align: left; }
+  .meta, .say { font-size: 12px; color: var(--muted-fg); margin: 0; }
+  .say.bad { color: var(--danger); }
+  .btn { height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer;
+         font-size: 13px; font-weight: 500; }
+  .btn:hover { background: var(--muted); }
+  .btn.primary { background: var(--primary); border-color: transparent; color: var(--on-primary); }
+  .btn.primary:hover { filter: brightness(1.06); background: var(--primary); }
+  .btn.link { border: 0; background: transparent; color: var(--primary); padding: 0 4px; }
+  .btn.danger { background: var(--danger); border-color: transparent; color: #fff; }
   .btn[disabled] { opacity: .5; cursor: default; }
-  .pill { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; background: var(--fill); color: var(--label2); white-space: nowrap; }
-  .pill.wait { color: var(--warn); } .pill.yes { color: var(--in); } .pill.no { color: var(--out); } .pill.qb { color: var(--qb); background: var(--qb-soft); }
-  .card { background: var(--group); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 16px; }
-  .card h3 { margin: 0; font-size: 16.5px; line-height: 1.3; font-weight: 650; }
-  .card .say.bad, .say.bad { color: var(--out); }
-  .rows { margin-top: 10px; border-top: 1px solid var(--sep); }
-  .rowx { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--sep); font-size: 15px; }
-  .rowx .main { flex: 1; min-width: 0; } .rowx small { display: block; color: var(--label2); font-size: 13px; }
-  .empty { text-align: center; color: var(--label2); padding: 40px 10px; }
+  .card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .card h3 { margin: 0; font-size: 13.5px; font-weight: 700; }
+  .kicker { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted-fg); }
+  .rows { border-top: 1px solid var(--border); }
+  .rowx { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .rowx .main { flex: 1; min-width: 0; } .rowx small { display: block; color: var(--muted-fg); font-size: 12px; }
+  .nothing { margin: auto; color: var(--muted-fg); text-align: center; padding: 40px 0; }
+  .skel { height: 12px; border-radius: 6px; background: var(--muted); animation: pulse 1.4s ease-in-out infinite; }
 
-  /* ── one place to type or speak ── */
-  .dock { border-top: 1px solid var(--sep); padding: 8px 16px calc(10px + var(--safe)); background: var(--bg); }
-  .dock .in { max-width: 760px; margin: 0 auto; }
-  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 0 8px; }
-  .chips::-webkit-scrollbar { display: none; }
-  .chips button { flex: none; font-size: 14px; padding: 7px 13px; border-radius: 999px; background: var(--group); border: 1px solid var(--sep); cursor: pointer; }
-  .composer { display: flex; gap: 8px; align-items: flex-end; }
-  .composer textarea { flex: 1; min-width: 0; font-size: 16px; line-height: 1.4; background: var(--group); border: 1px solid var(--sep);
-                       border-radius: 21px; padding: 10px 15px; resize: none; min-height: 44px; max-height: 160px; overflow-y: auto; }
-  .round { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; border: 0; cursor: pointer; flex: none; }
-  .round svg { width: 21px; height: 21px; }
-  .round.mic { background: var(--group); color: var(--label); border: 1px solid var(--sep); }
-  .round.mic.on { background: var(--out); color: #fff; border-color: transparent; animation: pulse 1.2s infinite; }
-  .round.send { background: var(--qb); color: #fff; }
-  .round[disabled] { opacity: .5; cursor: default; }
-  .hint { font-size: 12.5px; color: var(--label2); margin: 6px 4px 0; }
+  /* ── one box to type or speak, floating like Eesa's ── */
+  .dock { padding: 8px 16px calc(12px + var(--safe)); }
+  .dock .in { max-width: 780px; margin: 0 auto; }
+  .composer { display: flex; align-items: flex-end; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 16px;
+              background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .composer:focus-within { border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+                           box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 18%, transparent); }
+  .composer textarea { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; resize: none; padding: 7px 6px;
+                       font-size: 14px; line-height: 1.5; min-height: 36px; max-height: 160px; overflow-y: auto; }
+  .sq { width: 36px; height: 36px; border-radius: 10px; border: 0; display: grid; place-items: center; cursor: pointer; flex: none; }
+  .sq.mic { background: transparent; color: var(--muted-fg); }
+  .sq.mic:hover { background: var(--muted); color: var(--fg); }
+  .sq.mic.on { background: var(--danger); color: #fff; animation: pulse 1.2s infinite; }
+  .sq.send { background: var(--primary); color: var(--on-primary); }
+  .sq[disabled] { opacity: .45; cursor: default; }
+  .hint { font-size: 11.5px; color: var(--muted-fg); margin: 6px 4px 0; text-align: center; }
 
-  /* ── the moment money moves: a real dialog ── */
-  .veil { position: fixed; inset: 0; background: rgba(20,24,28,.45); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
-  .dlg { background: var(--group); color: var(--label); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
-         width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: 20px 20px 16px; }
-  .dlg h2 { margin: 0 0 4px; font-size: 18px; }
-  .dlg .sub { margin: 0 0 14px; color: var(--label2); font-size: 14px; }
-  .dlg .facts { border: 1px solid var(--sep); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
-  .dlg .fact { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 14px; }
-  .dlg .fact.amt { border-top: 1px solid var(--sep); margin-top: 6px; padding-top: 8px; font-weight: 700; font-size: 20px; }
-  .dlg label { display: block; font-size: 13px; margin: 10px 0 4px; }
-  .dlg input, .dlg textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--sep); border-radius: 9px; background: var(--bg); }
-  .dlg .hintx { font-size: 12px; color: var(--label3); margin-top: 4px; }
-  .dlg .err { color: var(--out); font-size: 13px; margin-top: 8px; }
-  .dlg .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-  .sheet { position: fixed; inset: 0; z-index: 55; background: rgba(20,24,28,.4); display: flex; align-items: flex-end; justify-content: center; }
-  .sheet .panel { background: var(--bg); width: min(720px, 100%); border-radius: 18px 18px 0 0; padding: 18px 16px calc(22px + var(--safe)); max-height: 85vh; overflow: auto; }
-  .sheet h2 { font-size: 20px; margin: 0 0 4px; }
-  .sheet .rowx:last-child { border-bottom: 0; }
-  .areas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .toast { position: fixed; left: 50%; bottom: calc(110px + var(--safe)); transform: translateX(-50%); background: var(--label);
-           color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14.5px; font-weight: 600; z-index: 60;
-           box-shadow: 0 8px 30px rgba(0,0,0,.2); max-width: calc(100% - 32px); text-align: center; }
+  /* ── dialogs, for the moment money moves ── */
+  .veil { position: fixed; inset: 0; background: rgba(10,12,16,.45); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .dlg { background: var(--card); color: var(--fg); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+         width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: 18px 18px 14px; }
+  .dlg h2 { margin: 0 0 4px; font-size: 16px; }
+  .dlg .sub { margin: 0 0 12px; color: var(--muted-fg); font-size: 13px; }
+  .dlg .facts { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
+  .dlg .fact { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 13px; }
+  .dlg .fact.amt { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 7px; font-weight: 700; font-size: 17px; }
+  .dlg label { display: block; font-size: 12.5px; margin: 10px 0 4px; }
+  .dlg input, .dlg textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+  .dlg .hintx { font-size: 11.5px; color: var(--muted-fg); margin-top: 4px; }
+  .dlg .err { color: var(--danger); font-size: 12.5px; margin-top: 8px; }
+  .dlg .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .toast { position: fixed; left: 50%; bottom: calc(96px + var(--safe)); transform: translateX(-50%); background: var(--fg); color: var(--bg);
+           padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 60; max-width: calc(100% - 32px); text-align: center;
+           box-shadow: 0 8px 30px rgba(0,0,0,.2); }
 </style>
 </head>
 <body>
 <div class="shell" id="shell">
-  <aside class="side" aria-label="Conversations">
-    <div class="brand"><div class="mark" aria-hidden="true">qb</div><div class="co" id="co">QuickBooks</div></div>
-    <button class="sbtn new" data-act="new-chat">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="grow">New chat</span></button>
-    <button class="sbtn" id="needsBtn" data-act="open-needs">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 5h14l1 8v6H4v-6z"/></svg>
-      <span class="grow">Needs you</span><span class="badge" id="needsN" hidden>0</span></button>
+  <aside class="side" aria-label="Chats">
+    <div class="side-top"><span class="side-label">Chats</span></div>
+    <button class="new" data-act="new-chat">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      New chat</button>
     <nav class="convs" id="convs"></nav>
-    <div class="me"><button class="sbtn" id="who" aria-label="Your QuickBooks access">
-      <span class="avatar" id="whoA">·</span><span class="grow"><span id="whoName">You</span><small id="role">Checking your access…</small></span></button></div>
   </aside>
   <div class="scrim" data-act="menu"></div>
   <main class="main">
     <header class="bar">
-      <button class="icon menu" data-act="menu" aria-label="Conversations">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <div class="title" id="title">New chat</div>
-      <button class="icon" data-act="new-chat" aria-label="New chat">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="ghost menu" data-act="menu" aria-label="Chats">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      <div class="tt"><h1 id="title">QuickBooks</h1><div class="co" id="co">QuickBooks</div></div>
+      <button class="ghost" data-act="new-chat" aria-label="New chat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="newtxt">New chat</span></button>
     </header>
     <div class="scroll" id="scroll"><div class="col" id="view" aria-live="polite"></div></div>
     <footer class="dock"><div class="in">
-      <div class="chips" id="chips"></div>
       <form class="composer" id="composer" autocomplete="off">
-        <textarea id="box" rows="1" placeholder="Ask or tell QuickBooks…" aria-label="Ask or tell QuickBooks"></textarea>
-        <button type="button" class="round mic" id="mic" hidden aria-label="Speak">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-        <button type="submit" class="round send" id="send" aria-label="Send">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button type="button" class="sq mic" id="mic" hidden aria-label="Speak">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <textarea id="box" rows="1" placeholder="Ask anything…" aria-label="Ask QuickBooks"></textarea>
+        <button type="submit" class="sq send" id="send" aria-label="Send">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
       <div class="hint" id="hint" hidden></div>
     </div></footer>
@@ -605,21 +611,37 @@ function dayWord(iso) {
     - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
   return days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? 'This week' : 'Earlier';
 }
+var ICON = {
+  chat: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  wait: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  spark: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
+  chev: '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  flow: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+  ok: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
+  x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+  clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 1.5"/></svg>',
+};
+function ago(iso) {
+  var s = Math.max(0, (Date.now() - Date.parse(iso || '')) / 1000);
+  if (!isFinite(s)) return '';
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + 'm ago';
+  if (s < 86400) return Math.round(s / 3600) + 'h ago';
+  if (s < 7 * 86400) return Math.round(s / 86400) + 'd ago';
+  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+/** The chats, as Eesa lists them — and, when something waits on the person, that first. */
 function paintSide() {
-  var html = '', last = '';
-  (ST.convs || []).forEach(function (c) {
-    var g = c.id === 'earlier' ? 'Before chats' : dayWord(c.last_at);
-    if (g !== last) { html += '<div class="glab">' + g + '</div>'; last = g; }
-    html += '<button class="sbtn' + (ST.view === 'conv' && ST.conv === c.id ? ' on' : '') + '" data-act="open-conv" data-id="'
-      + esc(c.id) + '" title="' + esc(c.title) + '"><span class="grow">' + esc(c.title || 'Untitled') + '</span></button>';
-  });
-  if (ST.errors.convs) html += '<div class="glab" style="text-transform:none;letter-spacing:0;color:var(--out)">' + esc(ST.errors.convs) + '</div>';
-  else if (!html) html = '<div class="glab" style="text-transform:none;letter-spacing:0">Your conversations appear here.</div>';
-  $('#convs').innerHTML = html;
   var n = decisions();
-  $('#needsN').hidden = !n;
-  $('#needsN').textContent = String(n);
-  $('#needsBtn').classList.toggle('on', ST.view === 'needs');
+  var html = n ? '<button class="conv' + (ST.view === 'needs' ? ' on' : '') + '" data-act="open-needs"><span class="ic wait">' + ICON.wait
+      + '</span><span class="t"><b>Waiting on you</b><small>' + plural(n, 'item') + '</small></span></button>' : '';
+  (ST.convs || []).forEach(function (c) {
+    html += '<button class="conv' + (ST.view === 'conv' && ST.conv === c.id ? ' on' : '') + '" data-act="open-conv" data-id="' + esc(c.id)
+      + '" title="' + esc(c.title) + '"><span class="ic">' + ICON.chat + '</span><span class="t"><b>' + esc(c.title || 'New chat')
+      + '</b><small>' + plural(c.turns, 'message') + ' · ' + esc(c.id === 'earlier' ? 'before chats' : ago(c.last_at)) + '</small></span></button>';
+  });
+  if (ST.errors.convs) html += '<p class="say bad" style="padding:6px 4px">' + esc(ST.errors.convs) + '</p>';
+  $('#convs').innerHTML = html;
 }
 function decisions() { return needCards().filter(function (c) { return c.decide; }).length; }
 function convTitle(id) {
@@ -632,8 +654,8 @@ function show(view, conv) {
   ST.view = view;
   ST.conv = conv || '';
   $('#shell').classList.remove('open');
-  $('#title').textContent = view === 'needs' ? 'Needs you' : view === 'new' ? 'New chat' : convTitle(ST.conv);
-  paintView(); paintSide(); paintChips();
+  $('#title').textContent = view === 'needs' ? 'Waiting on you' : view === 'new' ? 'QuickBooks' : convTitle(ST.conv);
+  paintView(); paintSide();
 }
 async function openConv(id) {
   ST.items = null;
@@ -677,43 +699,39 @@ function greeting() {
   var hr = new Date().getHours();
   return (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (first ? ', ' + first : '') + '.';
 }
+/** Ways to start, as Eesa offers them: picking one fills the box, never sends. */
+function starts() {
+  var v = viewer(), conn = connected().length, out = [];
+  if (may('reports_financial')) out.push(['Last month', 'How did last month go?']);
+  if (may('reports_ar')) out.push(['Who owes us', 'Who owes us the most?']);
+  if (may('reports_ap')) out.push(['Bills to pay', 'What bills are due soon?']);
+  if (conn && v.posts_time) out.push(['Post hours', 'Post this week’s approved hours']);
+  if (conn && v.sets_pay) out.push(['Set pay', 'Set pay for ']);
+  if (may('sales')) out.push(['Draft an invoice', 'Draft an invoice for ']);
+  return out.slice(0, 4);
+}
 function welcomeView() {
-  var b = ST.brief || { loading: true, lines: [], errors: [] };
-  var n = decisions();
-  var html = '<div class="brief"><h1 class="hello">' + esc(b.hello || greeting()) + '</h1>';
-  if (b.loading) html += '<div class="skel" style="width:88%"></div><div class="skel" style="width:70%"></div>';
-  else {
-    html += b.lines.map(function (l) { return '<p>' + l + '</p>'; }).join('');
-    html += b.errors.map(function (e) { return '<p class="quiet">' + esc(e) + '</p>'; }).join('');
-    if (!b.lines.length && !b.errors.length && ACCESS && !ACCESS.has_access) {
-      html += '<p>' + esc(ACCESS.note || 'No QuickBooks role has been recorded for you yet, so nothing from QuickBooks will open. Whoever looks after QuickBooks can add it.') + '</p>';
-    }
-  }
-  html += n ? '<p><button class="btn link" style="padding:0;font-size:17px" data-act="open-needs">'
-            + count(n, 'thing needs', 'things need') + ' you →</button></p>'
-          : (ST.changes ? '<p class="quiet">Nothing needs you right now.</p>' : '');
-  html += '<p class="quiet" style="margin-top:16px">Ask anything about the books, or tell me what to set up — '
-    + '“add Alex at $18 an hour”, “post this week’s hours”. Nothing changes until you say OK.</p></div>';
-  return html;
+  return '<div class="empty"><span class="hero-ic">' + ICON.spark + '</span><h2>' + esc(greeting()) + '</h2>'
+    + '<div class="starts">' + starts().map(function (x, i) {
+        return '<button class="start" data-act="start" data-i="' + i + '"><span class="si">' + ICON.spark + '</span><span class="t"><b>'
+          + esc(x[0]) + '</b><small>' + esc(x[1]) + '</small></span></button>';
+      }).join('') + '</div></div>';
 }
 function needsView() {
-  var html = '<div class="h2">Needs you</div><p class="quiet" style="margin:0 0 4px">Everything waiting on you, from every conversation.</p>';
-  if (!ST.changes && !ST.errors.changes) return html + '<div class="skel"></div><div class="skel" style="width:70%"></div>';
+  if (!ST.changes && !ST.errors.changes) return '<div class="skel" style="width:60%"></div><div class="skel" style="width:80%"></div>';
+  var html = '';
   if (ST.errors.changes) html += '<div class="card"><p class="say bad">I could not read what is waiting for approval: ' + esc(ST.errors.changes) + '</p></div>';
   if (ST.errors.apps) html += '<div class="card"><p class="say bad">I could not read the connected apps: ' + esc(ST.errors.apps) + '</p></div>';
   var cards = needCards();
-  html += cards.length ? cards.map(function (c) { return c.html; }).join('') : '<div class="empty">Nothing needs you right now.</div>';
+  html += cards.length ? cards.map(function (c) { return c.html; }).join('') : '<div class="nothing">Nothing is waiting on you.</div>';
   var mine = ((ST.changes && ST.changes.my_requests) || []).filter(function (c) { return c.status === 'PENDING'; });
-  if (mine.length) {
-    html += '<div class="glab" style="margin:18px 4px 0">Waiting on somebody else</div>'
-      + mine.map(function (c) { return changeCard(c, true); }).join('');
-  }
+  if (mine.length) html += '<div class="kicker" style="margin-top:6px">Waiting on somebody else</div>' + mine.map(function (c) { return changeCard(c, true); }).join('');
   return html;
 }
 function convView() {
   if (ST.items === null) return '<div class="skel" style="width:40%;align-self:flex-end"></div><div class="skel" style="width:80%"></div>';
   var html = ST.errors.conv ? '<div class="card"><p class="say bad">' + esc(ST.errors.conv) + '</p></div>' : '';
-  if (!ST.items.length && !ST.errors.conv) html += '<div class="empty">Ask anything to start.</div>';
+  if (!ST.items.length && !ST.errors.conv) return welcomeView();
   return html + ST.items.map(function (it) {
     if (it.type === 'turn') return turnView(it.turn);
     if (it.type === 'request') return requestCard(it.request, it.app || 'attendance');
@@ -731,17 +749,18 @@ function turnView(t) {
   var a;
   if (t.status === 'DONE') a = md(t.answer);
   // Never a silent failure: the question stays on screen with the reason.
-  else if (t.status === 'FAILED') a = '<p style="color:var(--out)">' + esc(t.error || 'No answer came back.') + '</p>';
-  else a = '<p class="thinking working">' + (t.slow ? 'Still working — a long report takes a while' : 'Working on it') + '</p>';
-  var did = t.actions || [];
-  var key = 'did:' + t.id;
-  var log = did.length ? '<details class="did" data-keep="' + esc(key) + '"' + (ST.open[key] ? ' open' : '') + '><summary>What I did · '
-      + did.length + '</summary><ul class="log">' + did.map(function (x) {
-        return '<li class="' + (x.outcome === 'ok' || x.outcome === 'nothing' ? 'eesa' : 'bad') + '">' + esc(x.text)
-          + '<time>' + esc(clock(x.at)) + '</time></li>';
-      }).join('') + '</ul></details>' : '';
-  return '<div class="turn me"><div class="bubble"><p>' + esc(t.question) + '</p></div></div>'
-    + '<div class="turn" data-turn="' + esc(t.id) + '"><div class="bubble">' + a + '</div>' + log + '</div>';
+  else if (t.status === 'FAILED') a = '<p style="color:var(--danger)">' + esc(t.error || 'No answer came back.') + '</p>';
+  else a = '<p class="thinking working">' + (t.slow ? 'Still working — a long report takes a while' : 'Thinking') + '</p>';
+  var did = t.actions || [], key = 'did:' + t.id, open = !!ST.open[key];
+  var tools = did.length ? '<div class="tools"><button class="chip" data-act="steps" data-key="' + esc(key) + '" aria-expanded="' + open + '">'
+      + ICON.spark + 'Used ' + plural(did.length, 'step') + ICON.chev + '</button></div>'
+      + (open ? '<ul class="log">' + did.map(function (x) {
+          return '<li class="' + (x.outcome === 'ok' || x.outcome === 'nothing' ? 'eesa' : 'bad') + '"><span class="dot"></span><span class="tx">'
+            + esc(x.text) + '</span><time>' + esc(clock(x.at)) + '</time></li>';
+        }).join('') + '</ul>' : '') : '';
+  return '<div class="row me"><div class="bubble">' + esc(t.question).replace(/\n/g, '<br>') + '</div></div>'
+    + '<div class="row ai" data-turn="' + esc(t.id) + '"><span class="av">' + ICON.spark + '</span><div class="stack"><div class="bubble">'
+    + a + '</div>' + tools + '</div></div>';
 }
 
 // ── flows: a request or a change, its log, its one decision ─────────────
@@ -752,15 +771,15 @@ function logView(entries, next) {
   var me = (ACCESS && ACCESS.email) || '';
   return '<ul class="log">' + entries.map(function (e) {
     var who = e.by === 'person' ? (e.who && e.who !== me ? e.who : 'You') : (BY[e.by] || e.by);
-    return '<li class="' + esc(e.by) + (e.ok === false ? ' bad' : '') + '"><b>' + esc(who) + '</b> · ' + esc(e.text)
-      + '<time>' + esc(clock(e.at)) + '</time></li>';
-  }).join('') + (next ? '<li class="next">' + next + '</li>' : '') + '</ul>';
+    return '<li class="' + esc(e.by) + (e.ok === false ? ' bad' : '') + '"><span class="dot"></span><span class="tx"><b>' + esc(who) + '</b> · '
+      + esc(e.text) + '</span><time>' + esc(clock(e.at)) + '</time></li>';
+  }).join('') + (next ? '<li class="next"><span class="dot"></span><span class="tx">' + next + '</span></li>' : '') + '</ul>';
 }
 function requestCard(q, app) {
   var icon = { ok: '✓', warn: '!', stop: '✕' };
   var verdict = { ok: ['ok', 'Checked — looks right'], attention: ['warn', 'Checked — look at these first'],
                   stop: ['bad', 'Checked — this can’t be approved as it is'] }[q.verdict || (q.blocked ? 'stop' : 'attention')];
-  var pill = { DRAFTING: 'wait', CHECKING: 'wait', READY: 'qb', NEEDS_INFO: 'wait', APPLYING: 'wait', DONE: 'yes', FAILED: 'no' }[q.status] || '';
+  var state = { READY: 'wait', NEEDS_INFO: 'wait', DONE: 'done', FAILED: 'bad' }[q.status] || '';
   var steps = q.steps.length && ['CHECKING', 'READY', 'APPLYING'].indexOf(q.status) !== -1
     ? '<ol class="steps">' + q.steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' : '';
   var body = '', next = '';
@@ -791,12 +810,12 @@ function requestCard(q, app) {
     : [{ by: 'person', who: q.asked_by, text: 'Asked', at: q.created_at }].concat((q.results || []).map(function (r) {
         return { by: 'eesa', text: r.text, ok: r.ok };
       }));
-  return '<div class="flow" data-req="' + esc(q.id) + '"><div class="fhead"><div><div class="kicker">Attendance · request</div>'
-    + '<h3>“' + esc(q.words) + '”</h3></div><span class="pill ' + pill + '">' + esc(q.status_label) + '</span></div>'
-    + steps + body + logView(entries, next) + '</div>';
+  var fi = state === 'wait' ? ICON.flow : state === 'done' ? ICON.ok : state === 'bad' ? ICON.x : ICON.clock;
+  return '<div class="flow ' + state + '" data-req="' + esc(q.id) + '"><div class="fh"><span class="fi">' + fi + '</span><div class="ft"><b>'
+    + esc(q.words) + '</b><small>Attendance · ' + esc(q.status_label) + '</small></div></div><div class="fb">'
+    + steps + body + logView(entries, next) + '</div></div>';
 }
 
-var RAIL = { PENDING: 'wait', APPROVED: 'qb', EXECUTING: 'qb', EXECUTED: 'yes', VERIFIED: 'yes', FAILED: 'no', REJECTED: 'no' };
 /**
  * A change to QuickBooks as a flow. A person reading it must be able to answer,
  * without opening anything, whether this is a real financial action, whether it
@@ -832,7 +851,7 @@ function changeCard(c, mine) {
         }).join('') + '</div>';
   } else if (op === 'delete' || op === 'void') {
     opBlock = '<div class="strip bad"><b>This will ' + (c.kind === 'invoice' ? 'void' : 'delete') + ' the ' + esc(c.kind || 'record')
-      + '</b><div>Cannot be undone from Eesa. Approving needs the amount typed back.</div></div>';
+      + '</b> — it cannot be undone from Eesa, and approving needs the amount typed back.</div>';
   }
   var v = c.validation || {}, val = '';
   if ((v.errors || []).length) val = '<div class="strip bad"><b>This cannot be approved yet</b>' + v.errors.map(function (e) { return '<div>• ' + esc(e) + '</div>'; }).join('') + '</div>';
@@ -869,14 +888,16 @@ function changeCard(c, mine) {
   } else if (c.status === 'PENDING' && mine) {
     actions = '<div class="actions"><button class="btn" data-act="cancel" data-id="' + esc(c.id) + '">Cancel request</button></div>';
   }
-  var who = c.counterparty_name ? '<div class="meta">' + (c.counterparty_kind === 'vendor' ? 'Vendor' : 'Customer') + ': ' + esc(c.counterparty_name) + '</div>' : '';
-  return '<div class="flow" data-change="' + esc(c.id) + '" data-mine="' + (mine ? '1' : '') + '">'
-    + '<div class="fhead"><div><div class="kicker">Change to QuickBooks · ' + esc(c.status_label || c.status) + '</div>'
-    + '<h3>' + (op === 'update' ? 'Edit: ' : (op === 'delete' || op === 'void') ? 'Delete: ' : '') + esc(c.summary) + '</h3>' + who + '</div>'
-    + '<div class="amt">' + money(c.amount) + '</div></div>'
-    + lines + opBlock + val + logView(e, next) + actions + '</div>';
+  var state = c.status === 'PENDING' && !mine ? 'wait' : (c.status === 'VERIFIED' || c.status === 'EXECUTED') ? 'done'
+    : (c.status === 'FAILED' || c.status === 'REJECTED') ? 'bad' : '';
+  var fi = state === 'wait' ? ICON.flow : state === 'done' ? ICON.ok : state === 'bad' ? ICON.x : ICON.clock;
+  var title = (op === 'update' ? 'Edit: ' : (op === 'delete' || op === 'void') ? 'Delete: ' : '') + (c.summary || '');
+  return '<div class="flow ' + state + '" data-change="' + esc(c.id) + '" data-mine="' + (mine ? '1' : '') + '">'
+    + '<div class="fh"><span class="fi">' + fi + '</span><div class="ft"><b>' + esc(title) + '</b><small>Change to QuickBooks · '
+    + esc(c.status_label || c.status) + (c.counterparty_name ? ' · ' + esc(c.counterparty_name) : '') + '</small></div>'
+    + '<div class="amt">' + money(c.amount) + '</div></div><div class="fb">' + lines + opBlock + val + logView(e, next) + actions + '</div></div>';
 }
-function pillClass(st) { return RAIL[st] || ''; }
+function pillClass(st) { return { PENDING: 'wait', VERIFIED: 'yes', EXECUTED: 'yes', FAILED: 'no', REJECTED: 'no' }[st] || ''; }
 
 // ── keeping it live ─────────────────────────────────────────────────────
 // A draft takes the assistant and the checker 20–60 seconds; a flow says what
@@ -901,6 +922,10 @@ function watchConv() {
       || (it.type === 'turn' && (it.turn.status === 'QUEUED' || it.turn.status === 'RUNNING'));
   });
   if (busy && !asking) convTimer = setTimeout(loadTimeline, 3000);
+  // A flow that has just settled may now wait on the person: "Waiting on you"
+  // says so at once, not at the next minute's refresh.
+  if (!busy && ST.wasBusy) loadNeeds();
+  ST.wasBusy = busy;
 }
 function refresh() { return ST.view === 'conv' ? loadTimeline().then(loadNeeds) : loadNeeds(); }
 
@@ -962,29 +987,6 @@ $('#box').addEventListener('keydown', function (e) {
 });
 $('#composer').addEventListener('submit', function (e) { e.preventDefault(); sendMessage($('#box').value); });
 
-/** Suggestions follow the role, and only open a new chat. */
-function paintChips() {
-  var v = viewer(), conn = connected().length, chips = [];
-  if (ST.view === 'new') {
-    if (may('reports_financial')) chips.push(['ask', 'How did last month go?']);
-    if (may('reports_ar')) chips.push(['ask', 'Who owes us the most?']);
-    if (may('reports_ap')) chips.push(['ask', 'What bills are due soon?']);
-    if (conn && v.posts_time) chips.push(['ask', 'Post this week’s approved hours']);
-    if (conn && v.sets_pay) chips.push(['fill', 'Set pay for ']);
-    if (may('sales')) chips.push(['fill', 'Draft an invoice for ']);
-  }
-  $('#chips').hidden = !chips.length;
-  $('#chips').innerHTML = chips.map(function (c, i) {
-    return '<button type="button" data-chip="' + i + '">' + esc(c[1].trim()) + (c[0] === 'fill' ? '…' : '') + '</button>';
-  }).join('');
-  $('#chips').querySelectorAll('button').forEach(function (b, i) {
-    b.addEventListener('click', function () {
-      if (chips[i][0] === 'ask') return sendMessage(chips[i][1]);
-      $('#box').value = chips[i][1]; autosize(); $('#box').focus();
-    });
-  });
-}
-
 // ── decisions, and the rest of what a tap does ──────────────────────────
 async function pollChange(id) {
   for (var i = 0; i < 30; i++) {
@@ -1018,7 +1020,6 @@ document.addEventListener('toggle', function (e) {
   var d = e.target;
   if (d.matches && d.matches('details[data-keep]')) ST.open[d.getAttribute('data-keep')] = d.open;
 }, true);
-$('#who').addEventListener('click', openAccess);
 
 document.addEventListener('click', async function (e) {
   var b = e.target.closest('[data-act]');
@@ -1108,10 +1109,15 @@ document.addEventListener('click', async function (e) {
       b.disabled = true; b.textContent = 'Connecting…';
       await call('qb_app_connect', { app: app, action: 'connect' });
       toast('Connected — read only');
-      await loadNeeds(); paintChips();
+      await loadNeeds(); paintView();
       return;
     }
-    if (act === 'toggle') { ST.open[b.dataset.key] = !ST.open[b.dataset.key]; paintView(); return; }
+    if (act === 'toggle' || act === 'steps') { ST.open[b.dataset.key] = !ST.open[b.dataset.key]; paintView(); return; }
+    if (act === 'start') {
+      var pick = starts()[Number(b.dataset.i)];
+      if (pick) { $('#box').value = pick[1]; autosize(); $('#box').focus(); }
+      return;
+    }
   } catch (err) {
     // The expected outcomes of a race, said as what they are.
     if (err.code === 'already_executed') toast('Somebody else approved this first. It has already been sent.');
@@ -1127,72 +1133,22 @@ document.addEventListener('click', async function (e) {
 async function boot() {
   try {
     ACCESS = await platform('quickbooks_my_access', {});
-    paintWho(ACCESS);
   } catch (e) {
     ACCESS = { areas: [], has_access: false, note: e.message };
-    $('#role').textContent = 'Could not check your access';
+    toast('I could not check your QuickBooks access: ' + e.message);
   }
   paintView();
   loadConvs();
-  loadBrief();
+  invoke('get_company_info', {}).then(function (out) {
+    var info = payload(out);
+    if (info && info.CompanyName) $('#co').textContent = info.CompanyName;
+  }).catch(function () { /* the name is nice to have, not worth a message */ });
   await loadNeeds();
-  paintChips();
+  paintView();
   // Keep what needs you, and the history, current while the page stays open.
   setInterval(function () {
     if (!asking && document.visibilityState === 'visible') { loadNeeds(); loadConvs(); }
   }, 60000);
-}
-
-// ── the brief: where things stand, in words ─────────────────────────────
-async function loadBrief() {
-  var first = ((ACCESS && ACCESS.name) || '').trim().split(/\s+/)[0] || '';
-  var hr = new Date().getHours();
-  var hello = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + (first ? ', ' + first : '') + '.';
-  var lines = [], errors = [];
-  var jobs = [];
-  var lm = lastMonth();
-  if (may('reports_financial')) {
-    jobs.push(invoke('get_profit_and_loss', { start_date: lm.from, end_date: lm.to }).then(function (out) {
-      var pl = payload(out);
-      // Every section that is money in, and every section that is money out:
-      // a P&L splits what goes out three ways, and counting all three is what
-      // makes income − expenses equal QuickBooks' own net income to the cent.
-      var income = sumGroups(pl, ['income', 'otherincome']);
-      var spent = sumGroups(pl, ['cogs', 'expenses', 'otherexpenses']);
-      var net = findTotal(pl, 'netincome');
-      if (net === null) net = findTotal(pl, 'net income');
-      if (net === null && income !== null && spent !== null) net = income - spent;
-      if (income === null && spent === null) { lines[0] = 'Nothing was booked in ' + esc(lm.name) + '.'; return; }
-      lines[0] = 'In ' + esc(lm.name) + ' you took in <b class="in">' + money(income) + '</b> and spent <b>'
-        + money(spent) + '</b> — <b class="' + (Number(net) < 0 ? 'out' : 'in') + '">' + money(Math.abs(net)) + '</b> '
-        + (Number(net) < 0 ? 'lost' : 'profit') + '.';
-    }).catch(function (e) { errors.push('I could not read last month’s profit and loss: ' + e.message); }));
-  }
-  if (may('reports_ar')) {
-    jobs.push(invoke('get_aged_receivables', {}).then(function (out) {
-      var rows = agingRows(payload(out));
-      var total = rows.reduce(function (s, r) { return s + r[1]; }, 0);
-      lines[1] = total ? 'Customers owe you <b>' + money(total) + '</b>' + (rows[0] ? ' — the most is ' + esc(rows[0][0]) + ', ' + money(rows[0][1]) : '') + '.'
-                       : 'No customer owes you anything.';
-    }).catch(function (e) { errors.push('I could not read who owes you: ' + e.message); }));
-  }
-  if (may('reports_ap')) {
-    jobs.push(invoke('get_aged_payables', {}).then(function (out) {
-      var rows = agingRows(payload(out));
-      var total = rows.reduce(function (s, r) { return s + r[1]; }, 0);
-      lines[2] = total ? 'You owe suppliers <b>' + money(total) + '</b>' + (rows[0] ? ' — the most to ' + esc(rows[0][0]) + ', ' + money(rows[0][1]) : '') + '.'
-                       : 'You owe no supplier anything.';
-    }).catch(function (e) { errors.push('I could not read what you owe: ' + e.message); }));
-  }
-  jobs.push(invoke('get_company_info', {}).then(function (out) {
-    var info = payload(out);
-    if (info && info.CompanyName) $('#co').textContent = info.CompanyName;
-  }).catch(function () { /* the name is nice to have, not worth a line */ }));
-  ST.brief = { hello: hello, lines: [], errors: [], loading: true };
-  paintNow();
-  await Promise.all(jobs);
-  ST.brief = { hello: hello, lines: lines.filter(Boolean), errors: errors, loading: false };
-  paintNow();
 }
 
 // ── what needs you ──────────────────────────────────────────────────────
@@ -1485,45 +1441,6 @@ if (SR) {
     try { rec.start(); hint(''); $('#mic').classList.add('on'); $('#mic').setAttribute('aria-label', 'Stop listening'); }
     catch (e) { rec = null; hint('The microphone isn’t available here — type instead.'); }
   });
-}
-
-// ── who you are, when you ask ───────────────────────────────────────────
-function whenChecked(days) {
-  if (days === null || days === undefined) return 'not dated';
-  if (days <= 0) return 'checked today';
-  if (days === 1) return 'checked yesterday';
-  if (days < 31) return 'checked ' + days + ' days ago';
-  var m = Math.round(days / 30);
-  return 'checked ' + m + ' month' + (m === 1 ? '' : 's') + ' ago';
-}
-function paintWho(a) {
-  var name = a.name || a.email || 'You';
-  $('#whoA').textContent = (name.trim()[0] || '·').toUpperCase();
-  $('#whoName').textContent = name;
-  $('#role').textContent = a.has_access ? (a.role_label || 'QuickBooks') + (a.is_approver ? ' · you approve changes' : '')
-                                        : 'No QuickBooks role recorded';
-}
-function openAccess() {
-  var a = ACCESS || {};
-  var labels = a.area_labels || {}, viewOnly = a.view_only_areas || [];
-  var names = (a.approvers || []).map(function (p) { return esc(p.name || p.email); });
-  var row = function (k, v) { return '<div class="rowx"><div class="main"><small>' + k + '</small>' + v + '</div></div>'; };
-  var s = document.createElement('div'); s.className = 'sheet';
-  s.innerHTML = '<div class="panel" role="dialog" aria-modal="true" aria-label="Your QuickBooks access">'
-    + '<h2>' + esc(a.role_label || 'No QuickBooks role') + '</h2>'
-    + (a.note ? '<p class="say" style="color:var(--label2);margin:4px 0 0">' + esc(a.note) + '</p>' : '')
-    + '<div class="areas">' + (a.areas || []).map(function (x) {
-        return '<span class="pill">' + esc(labels[x] || AREA_WORDS[x] || x) + (viewOnly.indexOf(x) !== -1 ? ' · view only' : '') + '</span>'; }).join('') + '</div>'
-    + '<div class="card" style="margin-top:14px;padding:4px 16px">'
-    + row('Signed in as', esc(a.name || '') + (a.email ? ' · ' + esc(a.email) : ''))
-    + (a.has_access ? row('In QuickBooks you can', a.can_write_in_quickbooks ? 'View and change things' : 'View only — nothing you do can change QuickBooks')
-        + row('Changes are approved by', names.length ? names.join(', ') + (a.is_approver ? ' — including you' : '')
-            : 'Nobody yet. Until the workspace owner appoints an approver, nothing can change QuickBooks through Eesa.')
-        + row('Noted', esc(whenChecked(a.age_days)) + (a.entered_by ? ' by ' + esc(a.entered_by) : '') + (a.stale ? ' — worth re-checking' : '')) : '')
-    + '</div><p class="meta" style="margin:10px 4px 0">QuickBooks decides what you can see; Eesa only mirrors it. To change it, it changes in QuickBooks first.</p>'
-    + '<div class="actions"><button class="btn" data-close>Done</button></div></div>';
-  s.addEventListener('click', function (e) { if (e.target === s || e.target.hasAttribute('data-close')) s.remove(); });
-  document.body.appendChild(s);
 }
 
 </script>
