@@ -324,12 +324,29 @@ window.addEventListener('message', function (ev) {
   PARENT = ev.origin;
   // A shell new enough to send apiBase also opens links for this page.
   SHELL_OPENS = typeof m.apiBase === 'string';
-  TOKEN = m.token;
+  if (m.token !== TOKEN) { TOKEN = m.token; renewed(); }
   if (m.theme) document.documentElement.setAttribute('data-theme', m.theme);
   // The shell re-posts to renew the token; only the first says where to open.
   if (!booted) { booted = true; ROUTE = cleanRoute(m.route); boot(); }
 });
 try { parent.postMessage({ type: 'eesa:plugin-ready' }, '*'); } catch (e) {}
+
+// A session lasts minutes and the shell renews it on a timer — but a laptop
+// that slept, or a tab left in the background, can wake with the old one still
+// in hand (seen live: "Invalid or expired session token (Signature has
+// expired)" left in the sidebar). So a 401 is not an answer: ask the shell for
+// a fresh session, wait for one different from the one refused, and try once
+// more. Only when none comes is the person told, in words.
+var WAITING = [];
+function renewed() { var w = WAITING; WAITING = []; w.forEach(function (f) { f(true); }); }
+function freshSession(stale, ms) {
+  return new Promise(function (done) {
+    if (TOKEN && TOKEN !== stale) return done(true);
+    WAITING.push(done);
+    try { parent.postMessage({ type: 'eesa:plugin-ready' }, PARENT || '*'); } catch (e) {}
+    setTimeout(function () { done(TOKEN !== stale); }, ms);
+  });
+}
 // A page nobody hands a session to is not blank: it says so, and tells the
 // shell, because a failure that never reaches a server looks like nothing.
 setTimeout(function () {
@@ -393,8 +410,9 @@ async function platform(tool, args) {
 async function call(tool, args) {
   var r = await platform(tool, args || {});
   if (!r || r.ok === false) {
-    var err = new Error((r && (r.error || r.message)) || 'That did not work. Try again.');
-    err.code = r && r.code;
+    // Eesa's tools put the sentence in `message` and the code in `error`.
+    var err = new Error((r && (r.message || r.error)) || 'That did not work. Try again.');
+    err.code = r && (r.code || r.error);
     throw err;
   }
   return r;
@@ -420,17 +438,27 @@ async function send(body) {
   var init = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ tool: body.tool, args: body.args }),
   };
   var res = null;
-  for (var attempt = 0; attempt < 2; attempt++) {
+  // A write whose answer was lost may already have happened: it is not sent twice.
+  var tries = own(WRITES, body.tool) ? 1 : 2;
+  for (var attempt = 0; attempt < tries; attempt++) {
     try { res = await fetch(url, init); break; }
     catch (e) {
-      if (attempt === 1) {
+      if (attempt === tries - 1) {
         tell('quickbooks.page.call_failed', 'fail', 'network', { tool: body.tool, status: 0 });
         throw new Error('The connection dropped. Try again.');
       }
     }
+  }
+  if (res.status === 401 && !body._renewed) {
+    var stale = TOKEN;
+    if (await freshSession(stale, 20000)) return send(Object.assign({}, body, { _renewed: true }));
+    tell('quickbooks.page.call_failed', 'fail', 'session_expired', { tool: body.tool, status: 401 });
+    var gone = new Error('Your Eesa session ran out. Reload this page to carry on.');
+    gone.code = 'session_expired'; gone.status = 401;
+    throw gone;
   }
   if (!res.ok) {
     var out = {}, err;
@@ -457,6 +485,8 @@ async function send(body) {
   return res.json();
 }
 var MISSING = {};   // tools this Eesa has not got yet
+var WRITES = { quickbooks_draft_decide: 1, quickbooks_schedule_change: 1, quickbooks_change_decide: 1, qb_review: 1,
+               qb_people_decide: 1, qb_pay_save: 1, qb_app_connect: 1, qb_request_ask: 1, qb_tasks: 1 };
 
 /**
  * A button here is the person's own tap. A tool asked from one holds a draft,
@@ -568,8 +598,8 @@ function sumGroups(report, groups) {
  * midnight, so anywhere east of Greenwich it lands on the previous day in UTC
  * and every period silently shifted a day early: at GMT+0530 on 9 September
  * 2026 "Last month" asked QuickBooks for 2026-07-31 to 2026-08-30 — wrong at
- * both ends of a month boundary. It reported US$44,840 of income for August
- * against the real US$56,834.87, with nothing on screen to suggest the window
+ * both ends of a month boundary. It reported about four-fifths of a month's income
+ * against the real figure, with nothing on screen to suggest the window
  * was not the one named.
  */
 function lastMonth() {
@@ -712,6 +742,9 @@ var asking = false;
 function paintNow() { paintView(); paintSide(); }
 
 // ── the sidebar: New chat, Needs you, and every conversation ────────────
+function waitsIn(conv) {
+  return ((ST.sched && ST.sched.drafts) || []).some(function (d) { return d.conversation && d.conversation === conv; });
+}
 async function loadConvs() {
   try {
     var r = await call('specialist_chat_conversations', { limit: 50 });
@@ -763,7 +796,7 @@ function paintSide() {
     var flow = String(c.origin || '').toUpperCase() === 'FLOW';
     html += '<button class="conv' + (ST.view === 'conv' && ST.conv === c.id ? ' on' : '') + '" data-act="open-conv" data-id="' + esc(c.id)
       + '" title="' + esc(c.title) + '"><span class="ic' + (flow ? ' bell' : '') + '">' + (flow ? ICON.bell : ICON.chat)
-      + (c.waiting ? '<span class="waitdot"></span>' : '') + '</span><span class="t"><b>' + esc(c.title || 'New chat')
+      + (c.waiting || waitsIn(c.id) ? '<span class="waitdot"></span>' : '') + '</span><span class="t"><b>' + esc(c.title || 'New chat')
       + '</b><small>' + plural(c.turns, 'message') + ' · ' + esc(c.id === 'earlier' ? 'before chats' : ago(c.last_at)) + '</small></span></button>';
   });
   if (ST.errors.convs) html += '<p class="say bad" style="padding:6px 4px">' + esc(ST.errors.convs) + '</p>';
@@ -863,6 +896,7 @@ function needsView() {
   if (ST.errors.changes) html += '<div class="card"><p class="say bad">I could not read what is waiting for approval: ' + esc(ST.errors.changes) + '</p></div>';
   if (ST.errors.apps) html += '<div class="card"><p class="say bad">I could not read the connected apps: ' + esc(ST.errors.apps) + '</p></div>';
   if (ST.errors.sched) html += '<div class="card"><p class="say bad">I could not read what is scheduled: ' + esc(ST.errors.sched) + '</p></div>';
+  if (ST.errors.conn) html += '<div class="card"><p class="say bad">I could not check the QuickBooks connection: ' + esc(ST.errors.conn) + '</p></div>';
   var cards = needCards(), f = ST.focus || {};
   // What a push or a link opened this on, first — unless it is already here.
   if (f.run) html += runCard({ run_id: f.run });
@@ -1088,7 +1122,8 @@ function genericCard(c) {
 /** Something the agent drafted for this person: what it will do, and Yes or No. */
 var KICKER = { quickbooks_alert_save: 'Set up?', quickbooks_flow_save: 'Set up?', qb_tasks: 'Set up?',
                quickbooks_schedule_change: 'Change?', qb_review: 'Post?' };
-var SETTLED = { done: '✓ Done', cancelled: 'Cancelled — nothing changed', expired: 'This draft has expired — ask again' };
+var SETTLED = { done: '✓ Done', cancelled: 'Cancelled — nothing changed', expired: 'This draft has expired — ask again',
+                failed: 'It didn’t go through — ask again', replaced: 'Replaced by a newer draft' };
 function draftCard(d) {
   // A card that carries only its id takes the rest from the drafts listed.
   var all = ((ST.sched && ST.sched.drafts) || []).concat(Object.keys(ST.held).map(function (k) { return ST.held[k]; }));
@@ -1121,7 +1156,7 @@ function runCard(c) {
   var r = runOf(c), st = r.status || 'queued';
   var state = RUNNING.indexOf(st) !== -1 ? '' : (RERUN.indexOf(st) !== -1 || st === 'unknown') ? 'bad' : 'done';
   var at = r.scheduled_for || r.at;
-  var changes = (r.change_ids || []).map(function (id) { var f = changeFacts(id); return f ? changeCard(f, true) : ''; }).join('');
+  var changes = (r.change_ids || []).map(function (id) { return factsCard(id, changeFacts(id)); }).join('');
   return '<div class="flow ' + state + '" data-run="' + esc(r.run_id || r.id) + '"><div class="fh"><span class="fi">'
     + (state === 'done' ? ICON.ok : state === 'bad' ? ICON.x : ICON.clock) + '</span><div class="ft"><b>'
     + esc((r.title || 'A run') + (at ? ' · ' + when(at) : '')) + '</b><small>' + tag(st) + '</small></div></div><div class="fb">'
@@ -1157,8 +1192,12 @@ function changeItemCard(c) {
   var id = c.change_id || c.id;
   if (c.change) return changeCard(c.change, true);
   if ((ST.items || []).some(function (it) { return it.type === 'change' && it.change.id === id; })) return '';
-  var f = changeFacts(id);
-  return f ? changeCard(f, true) : '<div class="skel" style="width:60%"></div>';
+  return factsCard(id, changeFacts(id));
+}
+function factsCard(id, f) {
+  if (!f) return '<div class="skel" style="width:60%"></div>';
+  if (f.error) return '<p class="say bad">I couldn’t read change ' + esc(String(id).slice(0, 8)) + ': ' + esc(f.error) + '</p>';
+  return changeCard(f, true);
 }
 function changeFacts(id) {
   var known = findChange(id);
@@ -1166,8 +1205,9 @@ function changeFacts(id) {
   if (!(id in ST.facts)) {
     ST.facts[id] = null;
     platform('quickbooks_change_status', { change_id: id }).then(function (st) {
-      if (st && st.ok) { ST.facts[id] = st.change; paintView(); }
-    }).catch(function () {});
+      ST.facts[id] = st && st.ok ? st.change : { error: (st && (st.message || st.error)) || 'no answer' };
+      paintView();
+    }).catch(function (e) { ST.facts[id] = { error: e.message }; paintView(); });
   }
   return ST.facts[id];
 }
@@ -1270,7 +1310,7 @@ function calRow(it) {
   return '<div class="rowx"' + (sched ? ' data-act="cal-row" data-key="' + esc(k) + '" role="button" tabindex="0"' : '') + '>'
     + '<span class="tm">' + esc(it.local_time || it.time || clock(it.at)) + '</span><span class="fi">' + (sched ? ICON.bell : ICON.clock) + '</span>'
     + '<div class="main">' + esc(it.title) + (it.detail ? '<small>' + esc(it.detail) + '</small>' : '') + '</div>'
-    + tag(ran ? ran.status : it.status) + (it.amount != null ? '<span class="num">' + cash(it.amount) + '</span>' : '')
+    + tag(ran ? ran.status : it.status) + (it.amount !== '' && it.amount != null && isFinite(Number(it.amount)) ? '<span class="num">' + cash(it.amount) + '</span>' : '')
     + (rerun ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run it now</button>' : '') + '</div>'
     + (sched && ST.open[k] ? recentRuns(id) : '');
 }
@@ -1299,9 +1339,11 @@ async function runNow(key) {
   var args = { id: o.source_id || o.id, action: 'run_now' };
   if (o.occurrence) args.occurrence = o.occurrence;
   var go = async function () { out = await tapped('quickbooks_schedule_change', args); };
-  if (o.proposes) {
+  // A flow may ask QuickBooks for a change; when the item cannot say, ask first.
+  if (o.proposes || o.type === 'flow' || o.kind === 'flow') {
     if (!(await dialog({ title: 'Run it now?', ok: 'Run it now', submit: go,
-                         sub: 'This asks QuickBooks for ' + esc(o.proposes) + '. Approvers will be told.' }))) { paintView(); return; }
+                         sub: o.proposes ? 'This asks QuickBooks for ' + esc(o.proposes) + '. Approvers will be told.'
+                                         : 'If this flow asks QuickBooks for a change, the approvers will be told.' }))) { paintView(); return; }
   } else await go();
   var run = out && (out.run_id || (out.result && out.result.run_id));
   if (run) { ST.ran[key] = run; track(run, 'queued'); }
@@ -1513,7 +1555,11 @@ document.addEventListener('click', async function (e) {
       if (ST.open[b.dataset.key] && row) loadRuns(row.source_id || row.id);
       return;
     }
-    if (act === 'run-now') { b.disabled = true; return runNow(b.dataset.key); }
+    if (act === 'run-now') {
+      b.disabled = true;
+      try { await runNow(b.dataset.key); } catch (e) { toast(e.message); b.disabled = false; paintNow(); }
+      return;
+    }
     if (act === 'decide-draft') {
       var yes = b.dataset.do === 'yes';
       b.disabled = true;
@@ -1753,7 +1799,7 @@ function needCards() {
     out.push({ key: 'd:' + d.id, html: draftCard(d), decide: (ST.drafts[d.id] || d.state || 'pending') === 'pending' });
   });
   // My scheduled work that did not run; and work whose owner no longer can.
-  (sc.schedules || []).forEach(function (s) {
+  (sc.items || sc.schedules || []).forEach(function (s) {
     if (s.owner && s.owner.is_me && s.last && RERUN.indexOf(s.last.status) !== -1) out.push({ key: 's:' + s.id, html: scheduleCard(s), decide: true });
   });
   (sc.owner_needed || []).forEach(function (o) { out.push({ key: 'o:' + o.id, html: ownerCard(o), decide: true }); });

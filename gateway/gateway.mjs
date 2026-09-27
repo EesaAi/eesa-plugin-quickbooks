@@ -34,7 +34,15 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const PORT = parseInt(process.env.GATEWAY_PORT || "8080", 10);
 const TOKEN = process.env.GATEWAY_TOKEN || "";
 const MCP_DIR = process.env.QB_MCP_DIR || "/app";
+
 import crypto from "node:crypto";
+
+/** Eesa's own origins, from EESA_ORIGINS: exact https origins only, no wildcards. */
+function eesaOrigins() {
+  return String(process.env.EESA_ORIGINS || "")
+    .split(/[\s,]+/)
+    .filter((o) => /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(o));
+}
 
 const TOKEN_STORE = process.env.QB_TOKEN_STORE || "/data/qb-token.json";
 const ENVIRONMENT = process.env.QUICKBOOKS_ENVIRONMENT || "sandbox";
@@ -371,15 +379,27 @@ const server = http.createServer(async (req, res) => {
   // gateway, which checks the person's recorded QuickBooks role first. Serving
   // the HTML to an anonymous request reveals nothing but the layout.
   if (req.method === "GET" && (req.url === "/app" || req.url.startsWith("/app?"))) {
+    // Where Eesa is served from comes from this service's settings, never from
+    // the page: EESA_ORIGINS, exact origins separated by spaces or commas. The
+    // page takes a session only from one of them, and only they may frame it.
+    // Unset, the page is not served at all — loudly, rather than framed by
+    // anyone or pointed at a guess.
+    const origins = eesaOrigins();
+    if (!origins.length) {
+      res.writeHead(503, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+      return res.end("This QuickBooks page is not set up: EESA_ORIGINS is not set on the service.");
+    }
     try {
-      const html = fs.readFileSync(new URL("../public/app.html", import.meta.url));
+      const page = fs.readFileSync(new URL("../public/app.html", import.meta.url), "utf8").replace(
+        '<meta name="eesa-origins" content="">',
+        `<meta name="eesa-origins" content="${origins.join(" ")}">`);
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         // Framed by Eesa, and by nobody else.
-        "Content-Security-Policy": "frame-ancestors https://eesa.ai https://*.eesa.ai",
+        "Content-Security-Policy": `frame-ancestors ${origins.join(" ")}`,
         "Cache-Control": "no-store",
       });
-      return res.end(html);
+      return res.end(page);
     } catch (e) {
       return send(res, 500, { error: "app_unavailable", detail: String(e && e.message) });
     }

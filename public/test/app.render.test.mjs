@@ -43,7 +43,7 @@ function mount({ tools = {}, origins = EESA } = {}) {
       w.open = (url) => { p.opened.push(url); return null; };
       w.fetch = async (url, init) => {
         const { tool, args } = JSON.parse(init.body);
-        p.calls.push({ url, tool, args });
+        p.calls.push({ url, tool, args, auth: init.headers.Authorization });
         let a = tool in tools ? tools[tool] : DEFAULTS[tool];
         if (typeof a === 'function') a = a(args);
         if (a === undefined) a = NOT_AVAILABLE;
@@ -473,4 +473,80 @@ test('nothing on the page throws while it is used', async () => {
   await session(p, { route: { view: 'calendar' } });
   await click(p, p.$('[data-act="open-needs"]') || p.$('[data-act="new-chat"]'));
   assert.deepEqual(p.errors.map((e) => e.message), []);
+});
+
+// ── a session that ran out, and refusals in words ──────────────────────
+
+test('an expired session is renewed from the shell, and the call is tried again with the new one', async () => {
+  let n = 0;
+  const p = mount({ tools: { specialist_chat_conversations: () => (n++ === 0
+    ? { status: 401, body: { detail: 'Invalid or expired session token (Signature has expired).' } }
+    : { ok: true, conversations: [{ id: 'aa11', title: 'Bills to pay', turns: 1, last_at: '2026-09-27T14:00:00Z' }] }) } });
+  await session(p, { token: 'tok-1' });
+  const asked = p.posted.filter((x) => x.msg && x.msg.type === 'eesa:plugin-ready');
+  assert.ok(asked.length >= 2, 'after the 401 the page asks the shell for a session again');
+  assert.doesNotMatch(p.text('#convs'), /Invalid or expired/);
+  await session(p, { token: 'tok-2' });
+  const list = p.called('specialist_chat_conversations');
+  assert.equal(list.at(-1).auth, 'Bearer tok-2');
+  assert.match(p.text('#convs'), /Bills to pay/);
+  assert.doesNotMatch(p.text('#convs') + p.text('#view'), /Invalid or expired|Signature has expired/);
+});
+
+test('with no fresh session the person is told it ran out, in words, and the shell is told', async () => {
+  const p = mount({ tools: { specialist_chat_conversations: { status: 401, body: { detail: 'Invalid or expired session token (Signature has expired).' } } } });
+  await session(p, { token: 'tok-1' });
+  await settle(p, 20000);
+  assert.match(p.text('#convs'), /Your Eesa session ran out\. Reload this page to carry on\./);
+  assert.doesNotMatch(p.text('#convs') + p.text('#view'), /Signature has expired/);
+  assert.ok(p.events('quickbooks.page.call_failed').some((e) => e.code === 'session_expired'));
+});
+
+test('a refusal from Eesa\'s own tools is said in its own words, and Run it now can be tapped again', async () => {
+  const bad = { type: 'schedule', id: 'f1', title: 'Rent', when: 'Monthly', last: { status: 'missed' }, owner: { name: 'Sam Rivera', is_me: false } };
+  const p = mount({ tools: { qb_chat: chat([turn('t1', { cards: [bad] })]),
+    quickbooks_schedule_change: { ok: false, error: 'forbidden', message: 'Only Sam Rivera changes “Rent”; you may pause, skip or reassign it.' } } });
+  await session(p, { route: { conv: 'c-1' } });
+  await click(p, p.button('Run it now', '[data-sched="f1"]'));
+  assert.match(p.text('.toast'), /Only Sam Rivera changes “Rent”/);
+  assert.doesNotMatch(p.text('.toast'), /^forbidden$/);
+  assert.equal(p.button('Run it now', '[data-sched="f1"]').disabled, false);
+});
+
+test('Waiting on you reads the schedule as Eesa sends it (items)', async () => {
+  const p = mount({ tools: { quickbooks_schedule: { ok: true, drafts: [], items: [
+    { id: 'f1', kind: 'pull', title: 'Acme POS sales', when: 'Every day at 6:00 AM', last: { status: 'failed', said: 'Acme POS did not answer' },
+      owner: { name: 'Dana Reyes', is_me: true }, can: ['run_now'] }] } } });
+  await session(p, { route: { view: 'needs' } });
+  assert.ok(p.button('Run it now', '[data-sched="f1"]'));
+});
+
+test('a draft waiting in a conversation puts a dot on it, from the drafts Eesa lists', async () => {
+  const p = mount({ tools: {
+    specialist_chat_conversations: { ok: true, conversations: [{ id: 'aa11', title: 'Cash', turns: 1, last_at: '2026-09-27T14:00:00Z' }] },
+    quickbooks_schedule: { ok: true, items: [], drafts: [{ id: 'dr-1', title: 'Cash alert', tool: 'quickbooks_alert_save', conversation: 'aa11' }] } } });
+  await session(p);
+  assert.ok(p.$('[data-id="aa11"] .waitdot'));
+});
+
+test('a write whose connection dropped is not sent twice; a read is tried once more', async () => {
+  const draft = { type: 'draft', id: 'dr-1', tool: 'quickbooks_alert_save', title: 'Cash alert', lines: [] };
+  const p = mount({ tools: { qb_chat: chat([turn('t1', { cards: [draft] })]),
+    quickbooks_draft_decide: () => { throw new TypeError('Failed to fetch'); } } });
+  await session(p, { route: { conv: 'c-1' } });
+  await click(p, p.button('Yes', '[data-draft="dr-1"]'));
+  assert.equal(p.called('quickbooks_draft_decide').length, 1);
+  const q = mount({ tools: { quickbooks_changes: () => { throw new TypeError('Failed to fetch'); } } });
+  await session(q);
+  assert.equal(q.called('quickbooks_changes').length >= 2, true);
+});
+
+test('a calendar row with no amount shows no made-up $0.00', async () => {
+  const p = mount({ tools: { quickbooks_calendar: { ok: true, says: '1 thing', partial: [], days: [
+    { date: '2026-09-27', label: 'Today', items: [
+      { key: 'approval:c1', at: '2026-09-27T17:00:00Z', time: '12:00 PM', type: 'approval', title: 'Add vendor Acme Supplies',
+        status: 'waiting', amount: '', currency: '' }] }] } } });
+  await session(p, { route: { view: 'calendar' } });
+  assert.match(p.text('#view'), /Add vendor Acme Supplies/);
+  assert.doesNotMatch(p.text('#view'), /\$0\.00/);
 });
