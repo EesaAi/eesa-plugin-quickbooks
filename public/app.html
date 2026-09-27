@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>QuickBooks</title>
+<!-- Where Eesa is served from, exactly, space-separated: the gateway serves
+     this page with EESA_ORIGINS here. Empty, no session is trusted. -->
+<meta name="eesa-origins" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,13 +17,14 @@
     The same chat as Eesa's own: the chats down the side, the conversation,
     one box to type or speak. Everything said goes to the QuickBooks agent,
     which answers from the books and hands setup ("add Alex, $18 an hour")
-    to the attendance assistant. A request is a card in the conversation that
-    asked for it, with its log and the one decision it needs; each answer
-    carries the steps the agent took. Anything waiting on the person from
-    elsewhere sits at the top of the chats, as "Waiting on you".
+    to the assistant of the app it is about. A request is a card in the
+    conversation that asked for it, with its log and the one decision it
+    needs; each answer carries the steps the agent took. Anything waiting on
+    the person from elsewhere sits at the top of the chats, as "Waiting on you".
 
   NO CREDENTIAL EVER REACHES THIS PAGE
-    1. The Eesa shell posts { type:'eesa:session', token, theme, apiBase }.
+    1. The Eesa shell posts { type:'eesa:session', token, theme, apiBase, route },
+       taken only from an origin listed in <meta name="eesa-origins">.
     2. Every call goes to POST {eesa}/api/v1/gateway/plugin-ui-invoke/ with
        that short-lived token. Eesa checks the person's recorded QuickBooks
        role, injects this plugin's key server-side, and proxies the call.
@@ -75,9 +79,11 @@
   .conv:hover { border-color: color-mix(in oklch, var(--primary) 35%, var(--border)); }
   .conv.on { border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
              background: color-mix(in oklch, var(--primary) 6%, var(--card)); }
-  .conv .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none;
+  .conv .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; flex: none; position: relative;
               background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); }
   .conv .ic.wait { background: color-mix(in oklch, var(--warn) 16%, transparent); color: var(--warn); }
+  .conv .waitdot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; border-radius: 99px;
+                   background: var(--warn); box-shadow: 0 0 0 2px var(--bg); }
   .conv .t { flex: 1; min-width: 0; }
   .conv .t b { display: block; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conv .t small { display: block; font-size: 11.5px; color: var(--muted-fg); }
@@ -206,6 +212,15 @@
   .btn[disabled] { opacity: .5; cursor: default; }
   .card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .card h3 { margin: 0; font-size: 13.5px; font-weight: 700; }
+  .card.wait { border-color: color-mix(in oklch, var(--warn) 45%, var(--border)); }
+  .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; } .md p { margin: 6px 0; }
+  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600;
+         white-space: nowrap; background: var(--muted); color: var(--muted-fg); }
+  .tag.ok { background: color-mix(in oklch, var(--ok) 12%, transparent); color: var(--ok); }
+  .tag.warn { background: color-mix(in oklch, var(--warn) 14%, transparent); color: var(--warn); }
+  .tag.bad { background: color-mix(in oklch, var(--danger) 10%, transparent); color: var(--danger); }
+  .rowx .tm { width: 64px; flex: none; font-size: 12px; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+  .rowx .fi { color: var(--muted-fg); display: grid; }
   .kicker { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted-fg); }
   .rows { border-top: 1px solid var(--border); }
   .rowx { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
@@ -286,24 +301,70 @@
 'use strict';
 
 // ── session, handed in by the Eesa shell ────────────────────────────────
-var TOKEN = null, EESA = null, booted = false, ACCESS = null;
-var EESA_FALLBACK = (window.EESA_ORIGIN || 'https://eesa.ai');
+// Only an Eesa page may hand this page a session: its origin must be one the
+// gateway listed, exactly. The session used to be taken from anyone who posted
+// one, and calls went wherever its apiBase said — a token and every answer
+// handed to whichever page framed this one. There is no fallback host: a page
+// with no session says so instead of guessing where Eesa is.
+var TOKEN = null, EESA = null, PARENT = null, SHELL_OPENS = false, booted = false, ACCESS = null, ROUTE = null;
+var ORIGINS = [];
+document.querySelectorAll('meta[name="eesa-origins"]').forEach(function (m) {
+  String(m.content || '').split(/\s+/).forEach(function (o) { if (/^https?:\/\/[^\/\s]+$/.test(o)) ORIGINS.push(o); });
+});
+function allowed(o) { return ORIGINS.indexOf(o) !== -1; }
 
 window.addEventListener('message', function (ev) {
   var m = ev.data || {};
-  if (m.type !== 'eesa:session' || !m.token) return;
-  // Prefer an explicit apiBase. ev.origin only holds when a cross-origin Eesa
-  // parent framed us; loaded top-level (the mobile WebView) it is OUR OWN
-  // origin, and we would POST at this plugin's own server, which has no such
-  // route — a 404 that reads as the page being broken.
-  EESA = (typeof m.apiBase === 'string' && /^https?:\/\//.test(m.apiBase))
-    ? m.apiBase.replace(/\/+$/, '')
-    : (ev.origin && ev.origin !== window.location.origin ? ev.origin : EESA_FALLBACK);
+  if (m.type !== 'eesa:session' || !m.token || !allowed(ev.origin)) return;
+  // apiBase when it is Eesa's too, else the page that framed us. On a phone
+  // that is still an Eesa page: the app frames this one exactly as the web does.
+  var api = '';
+  try { if (typeof m.apiBase === 'string' && allowed(new URL(m.apiBase).origin)) api = m.apiBase.replace(/\/+$/, ''); } catch (e) {}
+  EESA = api || ev.origin;
+  PARENT = ev.origin;
+  // A shell new enough to send apiBase also opens links for this page.
+  SHELL_OPENS = typeof m.apiBase === 'string';
   TOKEN = m.token;
   if (m.theme) document.documentElement.setAttribute('data-theme', m.theme);
-  if (!booted) { booted = true; boot(); }
+  // The shell re-posts to renew the token; only the first says where to open.
+  if (!booted) { booted = true; ROUTE = cleanRoute(m.route); boot(); }
 });
 try { parent.postMessage({ type: 'eesa:plugin-ready' }, '*'); } catch (e) {}
+// A page nobody hands a session to is not blank: it says so, and tells the
+// shell, because a failure that never reaches a server looks like nothing.
+setTimeout(function () {
+  if (booted) return;
+  $('#view').innerHTML = '<div class="nothing">Open QuickBooks from inside Eesa.</div>';
+  tell('quickbooks.page.boot', 'fail', 'no_session');
+}, 8000);
+
+/** What happened here, for the shell to record: names and codes, never a token or a figure. */
+function tell(name, outcome, code, context) {
+  try {
+    parent.postMessage({ type: 'eesa:event', name: name, outcome: outcome, code: code || '', context: context || {} }, PARENT || '*');
+  } catch (e) {}
+}
+var told = {};
+function tellOnce(key, name, outcome, code, context) { if (!told[key]) { told[key] = true; tell(name, outcome, code, context); } }
+
+/** Where the shell asked to open (a push, a link): these keys only, plain ids only. */
+function cleanRoute(r) {
+  var out = null;
+  ['view', 'change', 'run', 'conv', 'draft'].forEach(function (k) {
+    if (r && typeof r[k] === 'string' && /^[A-Za-z0-9:_-]{1,64}$/.test(r[k])) (out = out || {})[k] = r[k];
+  });
+  return out;
+}
+function applyRoute(r) {
+  if (!r) return;
+  if (r.conv) { openConv(r.conv); return; }
+  if (r.view === 'calendar') { openCalendar(); return; }
+  if (r.view === 'needs' || r.change || r.run || r.draft) {
+    ST.focus = r;
+    if (r.run) track(r.run, 'queued');
+    show('needs');
+  }
+}
 
 function $(s) { return document.querySelector(s); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -332,7 +393,7 @@ async function platform(tool, args) {
 async function call(tool, args) {
   var r = await platform(tool, args || {});
   if (!r || r.ok === false) {
-    var err = new Error((r && r.error) || 'That did not work. Try again.');
+    var err = new Error((r && (r.error || r.message)) || 'That did not work. Try again.');
     err.code = r && r.code;
     throw err;
   }
@@ -365,20 +426,49 @@ async function send(body) {
   for (var attempt = 0; attempt < 2; attempt++) {
     try { res = await fetch(url, init); break; }
     catch (e) {
-      if (attempt === 1) throw new Error('The connection dropped. Try again.');
+      if (attempt === 1) {
+        tell('quickbooks.page.call_failed', 'fail', 'network', { tool: body.tool, status: 0 });
+        throw new Error('The connection dropped. Try again.');
+      }
     }
   }
   if (!res.ok) {
-    var detail = '';
-    try { detail = (await res.json()).detail || ''; } catch (e) {}
+    var out = {}, err;
+    try { out = (await res.json()) || {}; } catch (e) {}
+    tell('quickbooks.page.call_failed', 'fail', out.code || String(res.status), { tool: body.tool, status: res.status });
     // Said the way a bookkeeper would need to hear it, not as a status code.
-    if (res.status === 403) {
-      throw new Error('Your QuickBooks access does not cover this. Ask whoever '
+    if (res.status === 403 && out.detail === 'This tool is not available to the UI.') {
+      // This page is newer than the Eesa it is talking to; the tool arrives
+      // with Eesa's next deploy, and is not asked for again until then.
+      MISSING[body.tool] = true;
+      err = new Error('This needs the latest Eesa — try again shortly');
+      err.code = 'not_available';
+    } else if (out.code === 'not_connected_here') {
+      ST.conn = Object.assign({}, ST.conn, { state: 'NOT_CONNECTED' });
+      err = new Error(out.detail || 'QuickBooks isn’t connected for this workspace yet.');
+    } else if (res.status === 403) {
+      err = new Error('Your QuickBooks access does not cover this. Ask whoever '
         + 'looks after QuickBooks to check your role.');
-    }
-    throw new Error(detail || 'QuickBooks did not answer. Try again in a moment.');
+    } else err = new Error(out.detail || 'QuickBooks did not answer. Try again in a moment.');
+    err.code = err.code || out.code;
+    err.status = res.status;
+    throw err;
   }
   return res.json();
+}
+var MISSING = {};   // tools this Eesa has not got yet
+
+/**
+ * A button here is the person's own tap. A tool asked from one holds a draft,
+ * as it does for the agent — Eesa never lets a call confirm itself — so the
+ * page answers the draft it is handed, as them, with that tap.
+ */
+async function tapped(tool, args) {
+  var r = await call(tool, args);
+  var id = r.draft_id || (r.card && r.card.type === 'draft' && r.card.id);
+  if (!id) return r;
+  var d = await call('quickbooks_draft_decide', { draft_id: id, decision: 'yes' });
+  return d.result || d;
 }
 
 /**
@@ -412,15 +502,24 @@ function payload(out) {
   try { return JSON.parse(text.slice(brace)); } catch (e) { return null; }
 }
 
-// The books are in US dollars wherever the reader is: "$1,240", never the
-// "US$1,240" a browser set to another country would write.
+// Money is in the company's currency, written the company's way, wherever the
+// reader is: "$1,240", never the "US$1,240" a browser set to another country
+// would write. quickbooks_my_access names both. An Eesa too old to name them
+// keeps the dollars this page always showed; one that names no currency gets
+// the number alone — a guessed symbol is a wrong one.
+function fmt(n, whole) {
+  var has = !!ACCESS && Object.prototype.hasOwnProperty.call(ACCESS, 'currency');
+  var cur = has ? ACCESS.currency : 'USD', loc = (has && ACCESS.money_locale) || 'en-US';
+  var plain = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  try {
+    return Number(n).toLocaleString(loc, cur ? Object.assign({ style: 'currency', currency: cur }, whole ? { maximumFractionDigits: 0 } : {}) : plain);
+  } catch (e) { return Number(n).toLocaleString('en-US', plain); }
+}
 function money(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
-  return Number(n).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  return fmt(n, true);
 }
-function cash(n) {
-  return Number(n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-}
+function cash(n) { return fmt(n || 0, false); }
 function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
 function count(n, one, many) {
   var words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
@@ -585,11 +684,28 @@ var ST = {
   errors: {},           // what could not be read, said on the page
   open: {},             // which details are open
   inline: {},
-  view: 'new',          // new | needs | conv
+  view: 'new',          // new | needs | calendar | conv
   conv: '',             // the open conversation
   convs: [],            // the sidebar
   items: null,          // the open conversation's timeline
+  cal: null,            // this week's schedule, runs and approvals — "Coming up"
+  calView: null,        // the calendar view's own read, over calDays
+  calDays: 7,
+  calCards: {},         // calendar cards in a conversation, by what they asked
+  sched: null,          // quickbooks_schedule: schedules, drafts, owners needed
+  conn: null,           // quickbooks_connection
+  connecting: null,     // { since, timedOut } while Intuit has the person
+  runs: {},             // run id -> its status, polled while it runs
+  ran: {},              // a Run it now's key -> the run it started
+  sruns: {},            // a schedule's recent runs, when its row is opened
+  drafts: {},           // draft id -> what became of it here
+  held: {},             // drafts a button here was handed back
+  facts: {},            // changes read by id
+  noAccess: false,      // no QuickBooks role recorded for this person
+  focus: null,          // what a route asked to see
 };
+var HELD = {};          // what a card's buttons act on, by key
+function keep(k, v) { HELD[k] = v; return k; }
 var asking = false;
 
 /** The loaders for the brief and "needs you" call this when they land. */
@@ -620,6 +736,8 @@ var ICON = {
   ok: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>',
   x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
   clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 1.5"/></svg>',
+  bell: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  cal: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
 };
 function ago(iso) {
   var s = Math.max(0, (Date.now() - Date.parse(iso || '')) / 1000);
@@ -630,14 +748,22 @@ function ago(iso) {
   if (s < 7 * 86400) return Math.round(s / 86400) + 'd ago';
   return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-/** The chats, as Eesa lists them — and, when something waits on the person, that first. */
+/**
+ * The chats, as Eesa lists them — and, when something waits on the person,
+ * that first; when something is scheduled, Coming up under it. Their two
+ * subtitles are the only brief. A chat a flow writes to wears a bell.
+ */
 function paintSide() {
-  var n = decisions();
+  var n = decisions(), up = comingUp();
   var html = n ? '<button class="conv' + (ST.view === 'needs' ? ' on' : '') + '" data-act="open-needs"><span class="ic wait">' + ICON.wait
       + '</span><span class="t"><b>Waiting on you</b><small>' + plural(n, 'item') + '</small></span></button>' : '';
+  if (up) html += '<button class="conv' + (ST.view === 'calendar' ? ' on' : '') + '" data-act="open-calendar"><span class="ic">' + ICON.cal
+      + '</span><span class="t"><b>Coming up</b><small>' + esc(up) + '</small></span></button>';
   (ST.convs || []).forEach(function (c) {
+    var flow = String(c.origin || '').toUpperCase() === 'FLOW';
     html += '<button class="conv' + (ST.view === 'conv' && ST.conv === c.id ? ' on' : '') + '" data-act="open-conv" data-id="' + esc(c.id)
-      + '" title="' + esc(c.title) + '"><span class="ic">' + ICON.chat + '</span><span class="t"><b>' + esc(c.title || 'New chat')
+      + '" title="' + esc(c.title) + '"><span class="ic' + (flow ? ' bell' : '') + '">' + (flow ? ICON.bell : ICON.chat)
+      + (c.waiting ? '<span class="waitdot"></span>' : '') + '</span><span class="t"><b>' + esc(c.title || 'New chat')
       + '</b><small>' + plural(c.turns, 'message') + ' · ' + esc(c.id === 'earlier' ? 'before chats' : ago(c.last_at)) + '</small></span></button>';
   });
   if (ST.errors.convs) html += '<p class="say bad" style="padding:6px 4px">' + esc(ST.errors.convs) + '</p>';
@@ -649,12 +775,12 @@ function convTitle(id) {
   return c ? c.title : (ST.pendingTitle || 'Conversation');
 }
 
-// ── the three views: a new chat, what needs you, a conversation ─────────
+// ── the views: a new chat, what needs you, what's coming up, a conversation ──
 function show(view, conv) {
   ST.view = view;
   ST.conv = conv || '';
   $('#shell').classList.remove('open');
-  $('#title').textContent = view === 'needs' ? 'Waiting on you' : view === 'new' ? 'QuickBooks' : convTitle(ST.conv);
+  $('#title').textContent = { needs: 'Waiting on you', new: 'QuickBooks', calendar: 'Coming up' }[view] || convTitle(ST.conv);
   paintView(); paintSide();
 }
 async function openConv(id) {
@@ -671,6 +797,11 @@ async function loadTimeline() {
     if (ST.conv !== conv) return;   // moved on while it loaded
     ST.items = r.items || [];
     delete ST.errors.conv;
+    ST.items.forEach(function (it) {
+      (it.type === 'turn' ? (it.turn.cards || []) : [asCard(it)]).forEach(function (c) {
+        if (c.type === 'run' && RUNNING.indexOf(c.status) !== -1) track(c.run_id || c.id, c.status);
+      });
+    });
   } catch (e) {
     ST.errors.conv = e.message;
     ST.items = ST.items || [];
@@ -685,7 +816,8 @@ function paintView() {
   var atEnd = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80, top = sc.scrollTop;
   var typed = {};
   box.querySelectorAll('input[data-answer]').forEach(function (i) { if (i.value) typed[i.getAttribute('data-answer')] = i.value; });
-  box.innerHTML = ST.view === 'needs' ? needsView() : ST.view === 'conv' ? convView() : welcomeView();
+  box.innerHTML = ST.view === 'needs' ? needsView() : ST.view === 'conv' ? convView()
+    : ST.view === 'calendar' ? calendarView() : welcomeView();
   Object.keys(typed).forEach(function (k) {
     var i = box.querySelector('input[data-answer="' + k + '"]');
     if (i) i.value = typed[k];
@@ -701,17 +833,25 @@ function greeting() {
 }
 /** Ways to start, as Eesa offers them: picking one fills the box, never sends. */
 function starts() {
-  var v = viewer(), conn = connected().length, out = [];
+  var v = viewer(), apps = connected(), conn = apps.length, out = [];
+  if (needsConnect() && canConnect()) out.push(['Connect', 'Connect QuickBooks']);
   if (may('reports_financial')) out.push(['Last month', 'How did last month go?']);
   if (may('reports_ar')) out.push(['Who owes us', 'Who owes us the most?']);
   if (may('reports_ap')) out.push(['Bills to pay', 'What bills are due soon?']);
+  if (ST.cal) out.push(['Coming up', 'What runs this week?']);
+  apps.forEach(function (a) {
+    if ((a.kinds || []).some(function (k) { return /sales/.test(k.key); })) out.push(['Yesterday’s sales', 'Post yesterday’s ' + a.name + ' sales']);
+  });
+  if (may('reports_financial')) out.push(['Cash alert', 'Tell me when cash drops below ']);
   if (conn && v.posts_time) out.push(['Post hours', 'Post this week’s approved hours']);
   if (conn && v.sets_pay) out.push(['Set pay', 'Set pay for ']);
   if (may('sales')) out.push(['Draft an invoice', 'Draft an invoice for ']);
-  return out.slice(0, 4);
+  return out.slice(0, 6);
 }
 function welcomeView() {
   return '<div class="empty"><span class="hero-ic">' + ICON.spark + '</span><h2>' + esc(greeting()) + '</h2>'
+    + (ST.noAccess ? '<p class="say">Your QuickBooks role isn’t recorded in Eesa yet — whoever looks after QuickBooks can add it.</p>' : '')
+    + (needsConnect() ? '<div style="width:100%;text-align:left">' + qbConnectCard() + '</div>' : '')
     + '<div class="starts">' + starts().map(function (x, i) {
         return '<button class="start" data-act="start" data-i="' + i + '"><span class="si">' + ICON.spark + '</span><span class="t"><b>'
           + esc(x[0]) + '</b><small>' + esc(x[1]) + '</small></span></button>';
@@ -722,7 +862,12 @@ function needsView() {
   var html = '';
   if (ST.errors.changes) html += '<div class="card"><p class="say bad">I could not read what is waiting for approval: ' + esc(ST.errors.changes) + '</p></div>';
   if (ST.errors.apps) html += '<div class="card"><p class="say bad">I could not read the connected apps: ' + esc(ST.errors.apps) + '</p></div>';
-  var cards = needCards();
+  if (ST.errors.sched) html += '<div class="card"><p class="say bad">I could not read what is scheduled: ' + esc(ST.errors.sched) + '</p></div>';
+  var cards = needCards(), f = ST.focus || {};
+  // What a push or a link opened this on, first — unless it is already here.
+  if (f.run) html += runCard({ run_id: f.run });
+  var fc = f.change && !cards.some(function (c) { return c.key === 'c:' + f.change; }) && changeFacts(f.change);
+  if (fc) html += changeCard(fc, !fc.can_decide);
   html += cards.length ? cards.map(function (c) { return c.html; }).join('') : '<div class="nothing">Nothing is waiting on you.</div>';
   var mine = ((ST.changes && ST.changes.my_requests) || []).filter(function (c) { return c.status === 'PENDING'; });
   if (mine.length) html += '<div class="kicker" style="margin-top:6px">Waiting on somebody else</div>' + mine.map(function (c) { return changeCard(c, true); }).join('');
@@ -734,10 +879,15 @@ function convView() {
   if (!ST.items.length && !ST.errors.conv) return welcomeView();
   return html + ST.items.map(function (it) {
     if (it.type === 'turn') return turnView(it.turn);
-    if (it.type === 'request') return requestCard(it.request, it.app || 'attendance');
+    if (it.type === 'request') return requestCard(it.request, it.app);
     if (it.type === 'change') return changeCard(it.change, true);
-    return '';
+    return cardView(asCard(it));   // nothing in a conversation is dropped
   }).join('');
+}
+/** A timeline item as a card: its fields under its own type's key, or on the item itself. */
+function asCard(it) {
+  var body = it[it.type];
+  return Object.assign({}, body && typeof body === 'object' ? body : it, { type: it.type });
 }
 
 // ── a question and its answer, with what the agent did ──────────────────
@@ -746,6 +896,13 @@ function clock(iso) {
   catch (e) { return ''; }
 }
 function turnView(t) {
+  var cards = (t.cards || []).map(cardView).join('');
+  // A flow's message: nobody asked, so there is no question — only what it said.
+  if (String(t.origin || '').toUpperCase() === 'FLOW') {
+    return '<div class="row ai" data-turn="' + esc(t.id) + '"><span class="av">' + ICON.bell + '</span><div class="stack">'
+      + '<div class="kicker">' + esc(t.question) + ' · ' + esc(clock(t.finished_at || t.created_at)) + '</div>'
+      + '<div class="bubble">' + md(t.answer) + '</div></div></div>' + cards;
+  }
   var a;
   if (t.status === 'DONE') a = md(t.answer);
   // Never a silent failure: the question stays on screen with the reason.
@@ -760,17 +917,22 @@ function turnView(t) {
         }).join('') + '</ul>' : '') : '';
   return '<div class="row me"><div class="bubble">' + esc(t.question).replace(/\n/g, '<br>') + '</div></div>'
     + '<div class="row ai" data-turn="' + esc(t.id) + '"><span class="av">' + ICON.spark + '</span><div class="stack"><div class="bubble">'
-    + a + '</div>' + tools + '</div></div>';
+    + a + '</div>' + tools + '</div></div>' + cards;
 }
 
 // ── flows: a request or a change, its log, its one decision ─────────────
-var BY = { person: 'You', assistant: 'Attendance assistant', rules: 'Rules', checker: 'Checker',
-           eesa: 'Eesa', quickbooks: 'QuickBooks' };
+var BY = { person: 'You', rules: 'Rules', checker: 'Checker', eesa: 'Eesa', quickbooks: 'QuickBooks' };
+/** An app by the name the server gives it; the page names none itself. */
+function appName(key) {
+  var a = ((ST.apps && ST.apps.apps) || []).filter(function (x) { return x.key === key; })[0];
+  return a ? a.name : key ? key.charAt(0).toUpperCase() + key.slice(1) : 'The app';
+}
 /** The log: who did what, when; `next` is what the flow is waiting on now. */
-function logView(entries, next) {
+function logView(entries, next, app) {
   var me = (ACCESS && ACCESS.email) || '';
   return '<ul class="log">' + entries.map(function (e) {
-    var who = e.by === 'person' ? (e.who && e.who !== me ? e.who : 'You') : (BY[e.by] || e.by);
+    var who = e.by === 'person' ? (e.who && e.who !== me ? e.who : 'You')
+      : e.by === 'assistant' ? appName(app) + ' assistant' : (BY[e.by] || e.by);
     return '<li class="' + esc(e.by) + (e.ok === false ? ' bad' : '') + '"><span class="dot"></span><span class="tx"><b>' + esc(who) + '</b> · '
       + esc(e.text) + '</span><time>' + esc(clock(e.at)) + '</time></li>';
   }).join('') + (next ? '<li class="next"><span class="dot"></span><span class="tx">' + next + '</span></li>' : '') + '</ul>';
@@ -782,8 +944,8 @@ function requestCard(q, app) {
   var state = { READY: 'wait', NEEDS_INFO: 'wait', DONE: 'done', FAILED: 'bad' }[q.status] || '';
   var steps = q.steps.length && ['CHECKING', 'READY', 'APPLYING'].indexOf(q.status) !== -1
     ? '<ol class="steps">' + q.steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' : '';
-  var body = '', next = '';
-  if (q.status === 'DRAFTING') next = '<span class="working">The attendance assistant is drafting it</span>';
+  var body = '', next = '', name = appName(app);
+  if (q.status === 'DRAFTING') next = '<span class="working">' + esc(name) + ' assistant is drafting it</span>';
   else if (q.status === 'CHECKING') next = '<span class="working">A checker is looking it over</span>';
   else if (q.status === 'APPLYING') next = '<span class="working">Applying</span>';
   else if (q.status === 'NEEDS_INFO') {
@@ -812,8 +974,8 @@ function requestCard(q, app) {
       }));
   var fi = state === 'wait' ? ICON.flow : state === 'done' ? ICON.ok : state === 'bad' ? ICON.x : ICON.clock;
   return '<div class="flow ' + state + '" data-req="' + esc(q.id) + '"><div class="fh"><span class="fi">' + fi + '</span><div class="ft"><b>'
-    + esc(q.words) + '</b><small>Attendance · ' + esc(q.status_label) + '</small></div></div><div class="fb">'
-    + steps + body + logView(entries, next) + '</div></div>';
+    + esc(q.words) + '</b><small>' + esc(name) + ' · ' + esc(q.status_label) + '</small></div></div><div class="fb">'
+    + steps + body + logView(entries, next, app) + '</div></div>';
 }
 
 /**
@@ -899,6 +1061,316 @@ function changeCard(c, mine) {
 }
 function pillClass(st) { return { PENDING: 'wait', VERIFIED: 'yes', EXECUTED: 'yes', FAILED: 'no', REJECTED: 'no' }[st] || ''; }
 
+// ── cards the agents make: one decision at most on each ─────────────────
+var CARD = { draft: draftCard, run: runCard, schedule: scheduleCard, calendar: calendarCard, connect: qbConnectCard,
+             items: itemsCard, owner_needed: ownerCard, change: changeItemCard };
+function cardView(c) { return c && own(CARD, c.type) ? CARD[c.type](c) : genericCard(c || {}); }
+/** A key of one of this page's maps — never one a server's string finds on Object.prototype. */
+function own(map, k) { return Object.prototype.hasOwnProperty.call(map, k) ? map[k] : undefined; }
+
+/**
+ * A card this page has not been taught yet — the agent is newer than the page.
+ * Drawn, never dropped: its title, its words, its fields. Never a button the
+ * server sent: a page that draws whatever actions arrive does whatever it is
+ * told. The shell hears of each such type once.
+ */
+function genericCard(c) {
+  var type = String(c.type || 'card'), text = c.text || c.message || c.summary;
+  tellOnce('card:' + type, 'quickbooks.page.unknown_card', 'fail', 'unknown_type', { type: type });
+  var k = keep('ask:' + type + ':' + (c.id || c.title || ''), c.title || type);
+  return '<div class="card" data-card="' + esc(type) + '"><h3>' + esc(c.title || type) + '</h3>'
+    + (text ? '<div class="md">' + md(text) + '</div>' : '')
+    + (Array.isArray(c.fields) && c.fields.length ? '<div class="lines">' + c.fields.map(function (f) {
+        return '<div class="line"><span>' + esc(f && f.label) + '</span><span>' + esc(f && f.value) + '</span></div>'; }).join('') + '</div>' : '')
+    + '<div class="actions"><button class="btn link" data-act="ask-about" data-key="' + esc(k) + '">Ask about this</button></div></div>';
+}
+
+/** Something the agent drafted for this person: what it will do, and Yes or No. */
+var KICKER = { quickbooks_alert_save: 'Set up?', quickbooks_flow_save: 'Set up?', qb_tasks: 'Set up?',
+               quickbooks_schedule_change: 'Change?', qb_review: 'Post?' };
+var SETTLED = { done: '✓ Done', cancelled: 'Cancelled — nothing changed', expired: 'This draft has expired — ask again' };
+function draftCard(d) {
+  // A card that carries only its id takes the rest from the drafts listed.
+  var all = ((ST.sched && ST.sched.drafts) || []).concat(Object.keys(ST.held).map(function (k) { return ST.held[k]; }));
+  d = Object.assign({}, all.filter(function (x) { return x.id === d.id; })[0], d);
+  var st = ST.drafts[d.id] || d.state || 'pending';
+  var lines = (d.lines || []).map(function (l) {
+    return '<li>' + (l && typeof l === 'object' ? esc(l.label) + ' · ' + esc(l.value) : esc(l)) + '</li>';
+  }).join('');
+  return '<div class="card' + (st === 'pending' ? ' wait' : '') + '" data-draft="' + esc(d.id) + '"><div class="kicker">'
+    + esc(d.kicker || own(KICKER, d.tool) || 'Go ahead?') + '</div><h3>' + esc(d.title || 'A draft') + '</h3>'
+    + (lines ? '<ul class="steps">' + lines + '</ul>' : '')
+    + (st === 'pending'
+      ? '<div class="actions"><button class="btn" data-act="decide-draft" data-do="no" data-id="' + esc(d.id) + '">No</button>'
+        + '<button class="btn primary" data-act="decide-draft" data-do="yes" data-id="' + esc(d.id) + '">Yes</button></div>'
+      : '<p class="say">' + esc(own(SETTLED, st) || st) + '</p>') + '</div>';
+}
+
+// Runs, and what the calendar says of a day.
+var RUNNING = ['queued', 'running'], RERUN = ['failed', 'missed', 'lost'];
+var WORD = { planned: 'Planned', queued: 'Queued', running: 'Running', done: 'Done', said: 'Sent', nothing: 'Nothing to say',
+             failed: 'Failed', missed: 'Missed', skipped: 'Skipped', lost: 'Didn’t start', due: 'Due', overdue: 'Overdue',
+             waiting: 'Waiting', lapses: 'Lapses', unknown: 'Not known' };
+var TONE = { done: 'ok', said: 'ok', nothing: 'ok', failed: 'bad', missed: 'bad', lost: 'bad', overdue: 'bad', unknown: 'bad',
+             due: 'warn', waiting: 'warn', lapses: 'warn' };
+function tag(st) { return '<span class="tag ' + (own(TONE, st) || '') + '">' + esc(own(WORD, st) || st || '') + '</span>'; }
+function runOf(c) { return Object.assign({}, c, ST.runs[c.run_id || c.id] || {}); }
+
+/** A run of something scheduled: how it went, what it said, the changes it asked for. */
+function runCard(c) {
+  var r = runOf(c), st = r.status || 'queued';
+  var state = RUNNING.indexOf(st) !== -1 ? '' : (RERUN.indexOf(st) !== -1 || st === 'unknown') ? 'bad' : 'done';
+  var at = r.scheduled_for || r.at;
+  var changes = (r.change_ids || []).map(function (id) { var f = changeFacts(id); return f ? changeCard(f, true) : ''; }).join('');
+  return '<div class="flow ' + state + '" data-run="' + esc(r.run_id || r.id) + '"><div class="fh"><span class="fi">'
+    + (state === 'done' ? ICON.ok : state === 'bad' ? ICON.x : ICON.clock) + '</span><div class="ft"><b>'
+    + esc((r.title || 'A run') + (at ? ' · ' + when(at) : '')) + '</b><small>' + tag(st) + '</small></div></div><div class="fb">'
+    + (state === '' ? '<p class="say working">Running</p>' : '') + (r.said ? '<div class="md">' + md(r.said) + '</div>' : '')
+    + (r.error ? '<p class="say bad">' + esc(r.error) + '</p>' : '') + changes + '</div></div>';
+}
+
+/** Something scheduled. It changes by being told to; the one button is after a run that didn't happen. */
+function scheduleCard(s) {
+  var last = s.last || {}, k = keep('s:' + s.id, s), ran = ST.ran[k] && ST.runs[ST.ran[k]];
+  var rerun = RERUN.indexOf(last.status) !== -1 && (!s.can || s.can.indexOf('run_now') !== -1);
+  var about = [s.when, (s.next_time || s.next_at) && 'Next: ' + (s.next_time || when(s.next_at)),
+               s.owner && !s.owner.is_me && s.owner.name + ' owns it'].filter(Boolean).join(' · ');
+  return '<div class="card' + (rerun && !ran ? ' wait' : '') + '" data-sched="' + esc(s.id) + '"><div class="kicker">Scheduled</div>'
+    + '<h3>' + esc(s.title) + '</h3>' + (about ? '<p class="say">' + esc(about) + '</p>' : '')
+    + (last.status ? '<p class="say">Last time ' + tag(last.status) + (last.said ? ' ' + esc(last.said) : '') + '</p>' : '')
+    + (ran ? '<p class="say">Now ' + tag(ran.status) + '</p>'
+      : rerun ? '<div class="actions"><button class="btn primary" data-act="run-now" data-key="' + esc(k) + '">Run it now</button></div>' : '')
+    + '</div>';
+}
+
+/** Somebody's scheduled work whose owner can no longer run it: an admin takes it over. */
+function ownerCard(c) {
+  var d = ST.held['owner:' + c.id];
+  return '<div class="card wait" data-owner="' + esc(c.id) + '"><div class="kicker">Needs an owner</div>'
+    + '<h3>' + esc(c.title) + ' has no owner who can run it</h3>' + (c.why ? '<p class="say">' + esc(c.why) + '</p>' : '')
+    + (d ? draftCard(d) : '<div class="actions"><button class="btn primary" data-act="take-over" data-id="' + esc(c.id) + '">Take it over</button></div>')
+    + '</div>';
+}
+
+/** A change the agent asked for; drawn once, as its own item when the conversation has it. */
+function changeItemCard(c) {
+  var id = c.change_id || c.id;
+  if (c.change) return changeCard(c.change, true);
+  if ((ST.items || []).some(function (it) { return it.type === 'change' && it.change.id === id; })) return '';
+  var f = changeFacts(id);
+  return f ? changeCard(f, true) : '<div class="skel" style="width:60%"></div>';
+}
+function changeFacts(id) {
+  var known = findChange(id);
+  if (known) return known;
+  if (!(id in ST.facts)) {
+    ST.facts[id] = null;
+    platform('quickbooks_change_status', { change_id: id }).then(function (st) {
+      if (st && st.ok) { ST.facts[id] = st.change; paintView(); }
+    }).catch(function () {});
+  }
+  return ST.facts[id];
+}
+
+/** A day of an app's figures on its way to QuickBooks, and whether it can go. */
+var CHIP = { AMBER: ['warn', 'AMBER'], RED: ['bad', 'RED'] };
+function dayRow(i, app, extra) {
+  var chip = i.status === 'REVIEW' ? ['ok', 'Ready'] : own(CHIP, String(i.verdict || '').toUpperCase()) || ['', 'Waiting'];
+  var figs = (i.figures || []).map(function (f) {
+    return '<div class="line"><span>' + esc(f.label) + '</span><span class="num">' + esc(f.value) + '</span></div>'; }).join('');
+  return '<div class="rowx" data-item="' + esc(i.id) + '"><div class="main"><span>' + esc(i.title) + ' <span class="tag ' + chip[0] + '">' + chip[1] + '</span></span>'
+    + (i.detail ? '<small>' + esc(i.detail) + '</small>' : '') + (figs ? '<div class="lines">' + figs + '</div>' : '')
+    + (i.reason && i.status !== 'REVIEW' ? '<small>' + esc(i.reason) + '</small>' : '') + '</div>'
+    + (i.amount != null ? '<span class="num">' + cash(i.amount) + '</span>' : '')
+    + (chip[1] === 'AMBER' && i.status === 'WAITING' ? '<button class="btn" data-act="release" data-id="' + esc(i.id) + '" data-app="' + esc(app) + '">Release with a reason</button>' : '')
+    + (extra || '') + '</div>';
+}
+function itemsCard(c) {
+  var list = Array.isArray(c.items) ? c.items : [c];
+  return '<div class="card" data-card="items"><div class="kicker">' + esc(appName(c.app)) + ' → QuickBooks</div><div class="rows">'
+    + list.map(function (i) { return dayRow(i, c.app); }).join('') + '</div></div>';
+}
+
+/** Connecting QuickBooks: an admin connects; anyone else is told whom to ask. */
+function needsConnect() { return !!(ST.conn && ST.conn.state && ST.conn.state !== 'CONNECTED'); }
+function canConnect() { return ST.conn && ST.conn.can_connect != null ? !!ST.conn.can_connect : !!viewer().can_connect; }
+function qbConnectCard(c) {
+  var k = ST.conn || { state: 'NOT_CONNECTED', can_connect: !!(c && c.url) }, w = ST.connecting;
+  if (k.state === 'CONNECTED') return '<div class="card"><h3>QuickBooks is connected' + (k.company_name ? ' — ' + esc(k.company_name) : '') + '</h3></div>';
+  var again = k.state === 'NEEDS_SIGN_IN', who = k.who_can_connect || [], body;
+  var go = '<div class="actions"><span class="meta">If nothing opens, connect from Eesa on a computer.</span><button class="btn primary" data-act="qb-connect">'
+    + (again ? 'Reconnect' : 'Connect QuickBooks') + '</button></div>';
+  if (!(k.can_connect != null ? k.can_connect : canConnect())) {
+    body = '<p class="say">' + (who.length ? 'Ask ' + esc(who.length > 1 ? who.slice(0, -1).join(', ') + ' or ' + who[who.length - 1] : who[0])
+      + ' to connect QuickBooks.' : 'Ask whoever looks after QuickBooks to connect it.') + '</p>';
+  } else if (w && w.timedOut) body = '<p class="say bad">Nothing came back from Intuit — try Connect again.</p>' + go;
+  else if (w) body = '<p class="say working">Waiting for Intuit — finish in the window that opened</p>' + go;
+  else body = (k.what_to_do ? '<p class="say">' + esc(k.what_to_do) + '</p>' : '') + go;
+  return '<div class="card wait" data-card="connect"><h3>' + (again ? 'QuickBooks needs signing in again' : 'QuickBooks isn’t connected yet')
+    + '</h3>' + body + '</div>';
+}
+
+// ── Coming up: what runs, what is due, what didn't run ──────────────────
+function scheduled(cal) {
+  var out = [];
+  ((cal && cal.days) || []).forEach(function (d) {
+    (d.items || []).forEach(function (it) { if (it.source === 'schedule' || /^(alert|flow|pull)$/.test(it.type)) out.push(it); });
+  });
+  return out;
+}
+/** The sidebar's line: shown only when something is scheduled. */
+function comingUp() {
+  if (ST.errors.cal) return 'Couldn’t read it: ' + ST.errors.cal;
+  var s = scheduled(ST.cal);
+  if (!s.length) return '';
+  var next = ST.cal.next && ST.cal.next.title ? ST.cal.next : s.filter(function (it) { return it.status === 'planned'; })[0];
+  var failed = s.filter(function (it) { return RERUN.indexOf(it.status) !== -1; }).length;
+  return next ? 'Next: ' + next.title + ' · ' + (next.time || next.local_time || clock(next.at))
+    : failed ? failed + ' didn’t run' : 'Nothing this week';
+}
+function openCalendar() { show('calendar'); return loadCalendar(); }
+async function loadCalendar() {
+  try { ST.calView = await call('quickbooks_calendar', { days: ST.calDays }); delete ST.errors.calView; }
+  catch (e) { ST.errors.calView = e.message; }
+  paintView();
+}
+function calendarView() {
+  if (ST.errors.calView) return '<div class="card"><p class="say bad">' + esc(ST.errors.calView) + '</p></div>';
+  var c = ST.calView;
+  if (!c) return '<div class="skel" style="width:50%"></div><div class="skel" style="width:80%"></div>';
+  var tz = '';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  return (c.tz && tz && c.tz !== tz ? '<p class="meta">Times are ' + esc(c.tz_label || c.tz) + '</p>' : '')
+    + (c.partial || []).map(function (p) { return '<p class="say bad">' + esc(p.why) + '</p>'; }).join('')
+    + calDays(c.days)
+    + (ST.calDays < 62 ? '<div class="tools"><button class="chip" data-act="more-weeks">Two more weeks</button></div>' : '');
+}
+/** The calendar as a card in a conversation, read with what the agent asked. */
+function calendarCard(c) {
+  var key = JSON.stringify(c.args || {}), data = c.days ? c : ST.calCards[key];
+  if (data === undefined) {
+    ST.calCards[key] = null;
+    call('quickbooks_calendar', c.args || {}).then(function (r) { ST.calCards[key] = r; })
+      .catch(function (e) { ST.calCards[key] = { error: e.message }; }).then(paintView);
+  }
+  return '<div class="card" data-card="calendar"><div class="kicker">Coming up</div>'
+    + (!data ? '<div class="skel" style="width:70%"></div>' : data.error ? '<p class="say bad">' + esc(data.error) + '</p>' : calDays(data.days)) + '</div>';
+}
+function calDays(days) {
+  var html = (days || []).filter(function (d) { return (d.items || []).length; }).map(function (d) {
+    return '<div class="kicker">' + esc(d.label || d.date) + '</div><div class="rows">' + d.items.map(calRow).join('') + '</div>';
+  }).join('');
+  return html || '<div class="nothing">Nothing is planned or due.</div>';
+}
+/** One row: time, what, how it went, how much. Tapping a scheduled one opens its recent runs. */
+function calRow(it) {
+  var id = it.source_id || it.id, sched = it.source === 'schedule' || /^(alert|flow|pull)$/.test(it.type);
+  var k = keep('cal:' + (it.key || id + ':' + (it.occurrence || it.at)), it), ran = ST.ran[k] && ST.runs[ST.ran[k]];
+  var rerun = !ran && RERUN.indexOf(it.status) !== -1 && (!it.can || it.can.indexOf('run_now') !== -1);
+  return '<div class="rowx"' + (sched ? ' data-act="cal-row" data-key="' + esc(k) + '" role="button" tabindex="0"' : '') + '>'
+    + '<span class="tm">' + esc(it.local_time || it.time || clock(it.at)) + '</span><span class="fi">' + (sched ? ICON.bell : ICON.clock) + '</span>'
+    + '<div class="main">' + esc(it.title) + (it.detail ? '<small>' + esc(it.detail) + '</small>' : '') + '</div>'
+    + tag(ran ? ran.status : it.status) + (it.amount != null ? '<span class="num">' + cash(it.amount) + '</span>' : '')
+    + (rerun ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run it now</button>' : '') + '</div>'
+    + (sched && ST.open[k] ? recentRuns(id) : '');
+}
+function recentRuns(id) {
+  var runs = ST.sruns[id];
+  if (!runs) return '<div class="skel" style="width:50%"></div>';
+  if (runs.error) return '<p class="say bad">' + esc(runs.error) + '</p>';
+  if (!runs.length) return '<p class="meta">It hasn’t run yet.</p>';
+  return logView(runs.slice(0, 5).map(function (r) {
+    var at = r.scheduled_for || r.started_at, day = at ? new Date(at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' : '';
+    return { by: 'eesa', ok: RERUN.indexOf(r.status) === -1, at: at, text: day + (own(WORD, r.status) || r.status) + (r.said ? ' — ' + r.said : '') };
+  }));
+}
+async function loadRuns(id) {
+  try {
+    var r = await call('quickbooks_schedule', { id: id });
+    ST.sruns[id] = (((r.schedules || r.items || [])[0]) || {}).runs || [];
+  } catch (e) { ST.sruns[id] = { error: e.message }; }
+  paintView();
+}
+
+/** Run it now: a run that failed or was missed, asked for again, as the person who tapped. */
+async function runNow(key) {
+  var o = HELD[key], out = null;
+  if (!o) return;
+  var args = { id: o.source_id || o.id, action: 'run_now' };
+  if (o.occurrence) args.occurrence = o.occurrence;
+  var go = async function () { out = await tapped('quickbooks_schedule_change', args); };
+  if (o.proposes) {
+    if (!(await dialog({ title: 'Run it now?', ok: 'Run it now', submit: go,
+                         sub: 'This asks QuickBooks for ' + esc(o.proposes) + '. Approvers will be told.' }))) { paintView(); return; }
+  } else await go();
+  var run = out && (out.run_id || (out.result && out.result.run_id));
+  if (run) { ST.ran[key] = run; track(run, 'queued'); }
+  toast(run ? 'Running — it says here when it’s done' : (out && out.message) || 'Asked for');
+  paintNow();
+}
+
+// A run is queued on the server and answers with its id at once; the run
+// takes as long as it takes, and the edge gives up on any call over 30
+// seconds. So it is polled: every 2 seconds, every 10 after two minutes.
+var runTimer = null;
+function track(id, status) {
+  if (!id || ST.runs[id]) return;
+  ST.runs[id] = { run_id: id, status: status || 'queued', since: Date.now() };
+  watchRuns(2000);
+}
+function watchRuns(ms) {
+  clearTimeout(runTimer);
+  var ids = Object.keys(ST.runs).filter(function (id) { return RUNNING.indexOf(ST.runs[id].status) !== -1; });
+  if (!ids.length) return;
+  runTimer = setTimeout(async function () {
+    await Promise.all(ids.map(function (id) {
+      return call('quickbooks_run_status', { run_id: id }).then(function (r) { Object.assign(ST.runs[id], r.run || r); })
+        .catch(function (e) { ST.runs[id].status = 'unknown'; ST.runs[id].error = e.message; });
+    }));
+    var ended = ids.some(function (id) { return RUNNING.indexOf(ST.runs[id].status) === -1; });
+    paintView();
+    if (ended) { if (ST.view === 'calendar') loadCalendar(); loadNeeds(); }
+    var oldest = Math.min.apply(null, ids.map(function (id) { return ST.runs[id].since; }));
+    watchRuns(Date.now() - oldest > 120000 ? 10000 : 2000);
+  }, ms);
+}
+
+/**
+ * Open a link outside this frame. A shell that sends apiBase opens it for us,
+ * from the top window and outside the frame's sandbox, and only for this
+ * plugin's own /oauth/start; an older shell cannot, and the page opens it
+ * itself. Never both: that is two sign-in windows.
+ */
+function openExternal(url) {
+  if (SHELL_OPENS) { try { parent.postMessage({ type: 'eesa:open-external', url: url }, PARENT); } catch (e) {} return; }
+  try { window.open(url, '_blank', 'noopener'); } catch (e) {}
+}
+// While Intuit has the person, the page asks every 3 seconds whether they are
+// back — for ten minutes, and then it says nothing came back.
+var connTimer = null;
+function watchConnect(start) {
+  clearTimeout(connTimer);
+  if (start) ST.connecting = { since: Date.now() };
+  if (!ST.connecting) return;
+  connTimer = setTimeout(async function () {
+    try { ST.conn = await call('quickbooks_connection', { action: 'status' }); } catch (e) {}
+    if (ST.conn && ST.conn.state === 'CONNECTED') {
+      ST.connecting = null;
+      if (ST.conn.company_name) $('#co').textContent = ST.conn.company_name;
+      toast('Connected' + (ST.conn.company_name ? ' to ' + ST.conn.company_name : ''));
+      paintNow(); loadNeeds();
+      return;
+    }
+    if (Date.now() - ST.connecting.since >= 600000) {
+      ST.connecting.timedOut = true;
+      tell('plugin.open_external', 'fail', 'no_return', { plugin: 'quickbooks' });
+      paintNow();
+      return;
+    }
+    watchConnect();
+  }, 3000);
+}
+
 // ── keeping it live ─────────────────────────────────────────────────────
 // A draft takes the assistant and the checker 20–60 seconds; a flow says what
 // it is waiting on and changes on its own when it moves.
@@ -927,7 +1399,9 @@ function watchConv() {
   if (!busy && ST.wasBusy) loadNeeds();
   ST.wasBusy = busy;
 }
-function refresh() { return ST.view === 'conv' ? loadTimeline().then(loadNeeds) : loadNeeds(); }
+function refresh() {
+  return ST.view === 'conv' ? loadTimeline().then(loadNeeds) : ST.view === 'calendar' ? loadCalendar().then(loadNeeds) : loadNeeds();
+}
 
 // ── asking: everything goes to the QuickBooks agent ─────────────────────
 /**
@@ -1029,7 +1503,64 @@ document.addEventListener('click', async function (e) {
     if (act === 'menu') { $('#shell').classList.toggle('open'); return; }
     if (act === 'new-chat') { ST.items = null; show('new'); $('#box').focus(); return; }
     if (act === 'open-needs') { show('needs'); loadNeeds(); return; }
+    if (act === 'open-calendar') { return openCalendar(); }
     if (act === 'open-conv') { return openConv(id); }
+    if (act === 'more-weeks') { ST.calDays = Math.min(62, ST.calDays + 14); return loadCalendar(); }
+    if (act === 'cal-row') {
+      var row = HELD[b.dataset.key];
+      ST.open[b.dataset.key] = !ST.open[b.dataset.key];
+      paintView();
+      if (ST.open[b.dataset.key] && row) loadRuns(row.source_id || row.id);
+      return;
+    }
+    if (act === 'run-now') { b.disabled = true; return runNow(b.dataset.key); }
+    if (act === 'decide-draft') {
+      var yes = b.dataset.do === 'yes';
+      b.disabled = true;
+      try {
+        var dd = await call('quickbooks_draft_decide', { draft_id: id, decision: yes ? 'yes' : 'no' });
+        ST.drafts[id] = (dd.card && dd.card.state) || (yes ? 'done' : 'cancelled');
+        var res = dd.result || {};
+        if (res.run_id) track(res.run_id, 'queued');
+        toast(!yes ? 'Cancelled — nothing changed' : ST.drafts[id] === 'done' ? (res.message || 'Done') : own(SETTLED, ST.drafts[id]) || 'Done');
+      } catch (err) {
+        if (err.code === 'expired' || /expired/i.test(err.message)) ST.drafts[id] = 'expired';
+        throw err;
+      }
+      paintNow(); loadNeeds();
+      return;
+    }
+    if (act === 'take-over') {
+      // Somebody else's work becomes yours: drafted, and yours to say yes to.
+      b.disabled = true;
+      var t = await call('quickbooks_schedule_change', { id: id, action: 'reassign', new_owner: (ACCESS && ACCESS.email) || '' });
+      var held = t.card && t.card.type === 'draft' ? t.card : t.draft_id ? { type: 'draft', id: t.draft_id, title: t.preview } : null;
+      if (held) ST.held['owner:' + id] = held;
+      paintNow();
+      return;
+    }
+    if (act === 'release') {
+      var released = await dialog({ title: 'Release this day?', ok: 'Release', sub: 'Your reason stays with it, and in its note in QuickBooks.',
+        body: '<label for="relWhy">Why it is right as it is</label><textarea id="relWhy" rows="2" maxlength="300"></textarea>',
+        validate: function (v) { return v.querySelector('#relWhy').value.trim().length >= 3 ? null : 'why'; },
+        collect: function (v) { return { why: v.querySelector('#relWhy').value.trim() }; },
+        submit: function (v) { return tapped('qb_review', { app: app, action: 'release', ids: [id], reason: v.why }); } });
+      if (released) { toast('Released'); await refresh(); }
+      return;
+    }
+    if (act === 'qb-connect') {
+      b.disabled = true; b.textContent = 'Opening…';
+      var ticket = await call('quickbooks_connect', {});
+      if (!ticket.card || !ticket.card.url) throw new Error(ticket.message || 'No link came back — try again.');
+      openExternal(ticket.card.url);
+      watchConnect(true);
+      paintNow();
+      return;
+    }
+    if (act === 'ask-about') {
+      $('#box').value = 'Tell me more about “' + HELD[b.dataset.key] + '”'; autosize(); $('#box').focus();
+      return;
+    }
     if (act === 'approve' || act === 'reject' || act === 'cancel' || act === 'retry') {
       var c = findChange(id);
       if (!c) return;
@@ -1137,12 +1668,19 @@ async function boot() {
     ACCESS = { areas: [], has_access: false, note: e.message };
     toast('I could not check your QuickBooks access: ' + e.message);
   }
+  if (!SR) tell('quickbooks.page.boot', 'ok', 'no_voice', { voice: false });
   paintView();
   loadConvs();
   invoke('get_company_info', {}).then(function (out) {
     var info = payload(out);
     if (info && info.CompanyName) $('#co').textContent = info.CompanyName;
-  }).catch(function () { /* the name is nice to have, not worth a message */ });
+  }).catch(function (e) {
+    // The name is nice to have. What its refusal says is not: no role
+    // recorded at all, or no company connected here.
+    if (e.code === 'role_forbids' && !(ACCESS && ACCESS.role_key)) ST.noAccess = true;
+    if (e.code === 'role_forbids' || e.code === 'not_connected_here') paintNow();
+  });
+  applyRoute(ROUTE);
   await loadNeeds();
   paintView();
   // Keep what needs you, and the history, current while the page stays open.
@@ -1160,19 +1698,29 @@ async function loadNeeds() {
       .catch(function (e) { ST.errors.changes = e.message; }),
     ACCESS && ACCESS.has_access ? call('qb_apps', {}).then(function (r) { ST.apps = r; delete ST.errors.apps; })
       .catch(function (e) { ST.errors.apps = e.message; }) : null,
-
+    // No QuickBooks read in these: the same minute's poll can afford them.
+    newer('quickbooks_calendar', { days: 7, include: ['schedule', 'runs', 'approvals'] }, 'cal'),
+    newer('quickbooks_schedule', {}, 'sched'),
+    newer('quickbooks_connection', { action: 'status' }, 'conn'),
   ]);
+  if (ST.conn && ST.conn.company_name) $('#co').textContent = ST.conn.company_name;
   paintNow();
   var v = viewer(), conn = connected();
   await Promise.all(conn.map(function (a) {
     return Promise.all([
       loadRequests(a.key),
-      a.counts && (a.counts.ready_for_me || a.counts.failed) ? loadReview(a.key) : null,
+      a.counts && (a.counts.ready_for_me || a.counts.failed || a.counts.waiting) ? loadReview(a.key) : null,
       v.sees_staff ? call('qb_people', { app: a.key }).then(function (r) { ST.people[a.key] = r; }).catch(function () { delete ST.people[a.key]; }) : null,
     ]);
   }).concat(conn.length && v.sees_pay ? [call('qb_pay_setup', {}).then(function (r) { ST.setup = r; }).catch(function () { ST.setup = null; })] : []));
   paintNow();
   watch();
+}
+/** A tool from a newer Eesa: kept in ST[key] when there, left out quietly when this Eesa has not got it yet. */
+function newer(tool, args, key) {
+  if (MISSING[tool]) return null;
+  return call(tool, args).then(function (r) { ST[key] = r; delete ST.errors[key]; })
+    .catch(function (e) { if (e.code !== 'not_available') ST.errors[key] = e.message; });
 }
 function viewer() { return (ST.apps && ST.apps.viewer) || {}; }
 function connected() { return ((ST.apps && ST.apps.apps) || []).filter(function (a) { return a.connected; }); }
@@ -1189,7 +1737,9 @@ async function loadReview(app) {
 function needCards() {
   var out = [];   // { key, html, decide }
   var me = (ACCESS && ACCESS.email) || '';
-  var ch = ST.changes || {};
+  var ch = ST.changes || {}, sc = ST.sched || {};
+  // Nothing works until QuickBooks is connected, so that comes first.
+  if (needsConnect()) out.push({ key: 'connect', html: qbConnectCard(), decide: canConnect() });
   // A card already showing under the answer that made it is not drawn twice,
   // but it still needs the person, so it still counts.
   (ch.waiting_on_me || []).forEach(function (c) {
@@ -1198,7 +1748,21 @@ function needCards() {
   (ch.failed || []).forEach(function (c) {
     if (c.can_retry) out.push({ key: 'c:' + c.id, html: changeCard(c, false), decide: true, inline: !!ST.inline['c:' + c.id] });
   });
+  // What the agents drafted for this person, in any conversation.
+  (sc.drafts || []).forEach(function (d) {
+    out.push({ key: 'd:' + d.id, html: draftCard(d), decide: (ST.drafts[d.id] || d.state || 'pending') === 'pending' });
+  });
+  // My scheduled work that did not run; and work whose owner no longer can.
+  (sc.schedules || []).forEach(function (s) {
+    if (s.owner && s.owner.is_me && s.last && RERUN.indexOf(s.last.status) !== -1) out.push({ key: 's:' + s.id, html: scheduleCard(s), decide: true });
+  });
+  (sc.owner_needed || []).forEach(function (o) { out.push({ key: 'o:' + o.id, html: ownerCard(o), decide: true }); });
   connected().forEach(function (a) {
+    ((ST.review[a.key] || {}).items || []).forEach(function (i) {
+      if (i.status === 'WAITING' && String(i.verdict || '').toUpperCase() === 'AMBER') {
+        out.push({ key: 'i:' + i.id, html: itemsCard({ app: a.key, items: [i] }), decide: true });
+      }
+    });
     var r = ST.requests[a.key];
     if (r && r.failed) out.push({ key: 'rq:' + a.key, html: '<div class="card"><div class="kicker">' + esc(a.name) + '</div><p class="say bad">' + esc(r.failed) + '</p></div>' });
     ((r && r.open) || []).forEach(function (q) {
@@ -1233,9 +1797,7 @@ function postCard(a) {
   var list = '';
   if (ST.open['post:' + a.key] && items.length) {
     list = '<div class="rows">' + items.slice(0, 60).map(function (i) {
-      return '<div class="rowx"><div class="main">' + esc(i.title) + (i.detail ? '<small>' + esc(i.detail) + '</small>' : '') + '</div>'
-        + (i.amount != null ? '<span class="num">' + cash(i.amount) + '</span>' : '')
-        + '<button class="btn link" data-act="skip-item" data-id="' + esc(i.id) + '" data-app="' + esc(a.key) + '">Don’t post</button></div>';
+      return dayRow(i, a.key, '<button class="btn link" data-act="skip-item" data-id="' + esc(i.id) + '" data-app="' + esc(a.key) + '">Don’t post</button>');
     }).join('') + '</div>';
   }
   var names = items.slice(0, 3).map(function (i) { return esc(i.title); }).join(' · ');

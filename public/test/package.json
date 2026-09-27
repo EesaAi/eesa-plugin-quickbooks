@@ -1,0 +1,13 @@
+{
+  "name": "eesa-qbo-page-tests",
+  "private": true,
+  "type": "module",
+  "description": "Checks for public/app.html. Not part of the image: the Dockerfile copies app.html alone.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@sinonjs/fake-timers": "15.4.0",
+    "jsdom": "26.1.0"
+  }
+}
