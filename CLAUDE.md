@@ -17,10 +17,22 @@ tokens), bubbles, "Used N steps" trail and floating ask box as Eesa's chat:
 - **A conversation** (`qb_chat`): questions, answers with the steps the agent
   took, and every request made in it as a card with its log and the one
   decision it needs.
-- **An empty chat** is Eesa's: a greeting, ONE line saying where things stand
-  (whether QuickBooks answered and when, what needs the person, their
-  schedules — asked for on 28 Sep 2026), and a few ways to start that fill the
-  box. Nothing more: no brief, no other summary text.
+- **Home** (a new chat), asked for by the owner on 28 Sep 2026 — "a chat-based
+  system: calendars, events, flows, connected systems filling QuickBooks". A
+  greeting and ONE line saying where things stand, then what the agents are
+  doing, read from Eesa's tools and laid out, never invented:
+  - **Needs you** — the cards themselves (drafts, questions, approvals), not a
+    count of them; the rest one tap away;
+  - **This week** — the calendar: runs, pay periods, approvals, day by day;
+  - **Flows and alerts** — every one, when it runs, whether it is on, how it
+    last went; the owner's own Pause / Resume / Run now;
+  - **Connected systems** — QuickBooks and each app, checked, with what each
+    feeds QuickBooks;
+  - **Done lately** — changes sent to QuickBooks and how each went.
+
+  Ways to start fill the box and never send. On a phone it is one column in
+  that order. Something that could not be read says so in its own section.
+  New flows, alerts and connections are still made by saying so in the box.
 - **One box to type or speak.** Everything goes to the QuickBooks agent, which
   hands setup ("add Alex, $18 an hour") to the attendance assistant.
 

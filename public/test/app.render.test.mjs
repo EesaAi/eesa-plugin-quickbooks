@@ -617,3 +617,129 @@ test('a paused schedule whose last run failed does not wait on you', async () =>
   await session(p, { route: { view: 'needs' } });
   assert.equal(p.$('[data-sched="f9"]'), null);
 });
+
+// ── home: what needs you, this week, flows and alerts, systems, what was done ──
+
+const HOME = {
+  quickbooks_connection: { ...LIVE_CONN, apps: [{ key: 'acmepos', state: 'reading', last_read_ok_at: '2026-09-27T15:00:00Z' }] },
+  quickbooks_schedule: { ok: true,
+    drafts: [{ id: 'd1', title: 'Set up a weekly cash alert?', lines: ['Every Monday, 8:00 AM'], state: 'pending', tool: 'quickbooks_alert_save' }],
+    items: [
+      { id: 'f1', kind: 'alert', title: 'QuickBooks: Cash in the bank', when: 'At 09:00 on every day (America/Chicago)', paused: true,
+        can: ['resume', 'run_now'], owner: { name: 'Dana Reyes', is_me: true }, last: { at: '2026-09-26T16:00:00Z', status: 'nothing' } },
+      { id: 'f2', kind: 'flow', title: 'Monthly rent bill', when: 'At 09:00 on the 1st of every month (America/Chicago)', paused: false,
+        next_time: 'Thu 1 Oct, 9:00 AM', next_at: '2026-10-01T14:00:00Z', can: ['pause', 'run_now'], owner: { name: 'Dana Reyes', is_me: true } },
+    ] },
+  quickbooks_calendar: CAL,
+  qb_apps: { ok: true, viewer: { can_connect: true },
+    apps: [{ key: 'acmepos', name: 'Acme POS', what: 'Daily sales', connected: true, counts: { waiting: 3, posted: 12 },
+             tasks: [{ id: 't1', name: 'Post daily sales', schedule: { at: '07:00', every: 'day' }, is_on: true, last_run_at: '2026-09-27T12:00:00Z' },
+                     { id: 't2', name: 'Post wages', pay_schedule: { name: 'Weekly' }, schedule: { at: '07:00', every: 'day' }, is_on: false }] }],
+    coming: [{ key: 'bills', name: 'Bill scanner', what: 'Checked supplier bills' }] },
+  qb_requests: { ok: true, open: [], recent: [] },
+  quickbooks_changes: { ok: true, waiting_on_me: [], failed: [], my_requests: [
+    { id: 'c1', summary: 'Add Sam Lee as an employee', status: 'VERIFIED', status_label: 'Verified in QuickBooks',
+      requested_by_name: 'Dana Reyes', created_at: '2026-09-26T10:00:00Z', tool_name: 'create_employee' },
+    { id: 'c2', summary: 'Invoice Birch Cafe $40.00', status: 'REJECTED', status_label: 'Turned down',
+      requested_by_name: 'Dana Reyes', created_at: '2026-09-27T10:00:00Z', tool_name: 'create_invoice' },
+    { id: 'c3', summary: 'Still waiting', status: 'PENDING', created_at: '2026-09-27T11:00:00Z', tool_name: 'create_bill' }] },
+};
+const section = (p, title) => p.$$('#view section').find((s) => s.querySelector('h3') && s.querySelector('h3').textContent.startsWith(title));
+
+test('home lays out what needs you, this week, every flow and alert, each system and what was done', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  const needs = section(p, 'Needs you');
+  assert.ok(needs.querySelector('[data-draft="d1"]'), 'the draft itself is on the home screen, with its buttons');
+  assert.match(needs.textContent, /Set up a weekly cash alert\?/);
+
+  assert.match(section(p, 'This week').textContent, /Acme POS sales.*Bills to pay.*Rent/s);
+
+  const flows = section(p, 'Flows and alerts').textContent;
+  assert.match(flows, /Cash in the bank\s*Paused/);
+  assert.doesNotMatch(flows, /QuickBooks: Cash/, 'the app does not repeat its own name');
+  assert.match(flows, /Alert · At 09:00 on every day/);
+  assert.doesNotMatch(flows, /America\/Chicago/, 'no zone name in the sentence');
+  assert.match(flows, /Monthly rent bill\s*On/);
+  assert.match(flows, /next Thu 1 Oct, 9:00 AM/);
+
+  const systems = section(p, 'Connected systems').textContent;
+  assert.match(systems, /QuickBooks\s*Connected\s*Acme Bistro · answered 2m ago/);
+  assert.match(systems, /Acme POS\s*Reading\s*Daily sales · read 1h ago/);
+  assert.match(systems, /3 items waiting · 12 posted/);
+  assert.match(systems, /→ Post daily sales · daily 07:00 · ran 4h ago/);
+  assert.match(systems, /→ Post wages · Weekly pay period · daily 07:00 · off/, 'two tasks of one kind say which pay period each posts');
+  assert.match(systems, /Bill scanner\s*Coming/);
+
+  const done = section(p, 'Done lately').textContent;
+  assert.match(done, /Invoice Birch Cafe \$40\.00\s*Turned down.*Add Sam Lee as an employee\s*Verified in QuickBooks/s, 'newest first');
+  assert.doesNotMatch(done, /Still waiting/, 'what is still waiting is not something done');
+  assert.deepEqual(p.errors.map((e) => e.message), []);
+});
+
+test('a flow\'s owner pauses and resumes it from home, as their own tap', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: (a) => ({ ok: true, message: a.action === 'pause' ? 'Paused.' : 'Back on.' }) } });
+  await session(p);
+  await click(p, p.$('[data-sched="f1"] [data-do="resume"]'));
+  assert.deepEqual(p.called('quickbooks_schedule_change')[0].args, { id: 'f1', action: 'resume' });
+  await click(p, p.$('[data-sched="f2"] [data-do="pause"]'));
+  assert.deepEqual(p.called('quickbooks_schedule_change')[1].args, { id: 'f2', action: 'pause' });
+  assert.equal(p.$('[data-sched="f1"] [data-do="pause"]'), null, 'a paused one offers Resume, not Pause');
+});
+
+test('a flow that asks QuickBooks for changes asks first when run from home', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: { ok: true, run_id: 'r9' } } });
+  await session(p);
+  await click(p, p.$('[data-sched="f2"] [data-act="run-now"]'));
+  assert.equal(p.called('quickbooks_schedule_change').length, 0, 'nothing is run before the person says so');
+  assert.match(p.text(), /Run it now\?/);
+});
+
+test('a done row opens to the change itself, and closes again', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  const row = () => p.$('[data-key="done:c1"]');
+  assert.equal(row().getAttribute('aria-expanded'), 'false');
+  await click(p, row());
+  assert.equal(row().getAttribute('aria-expanded'), 'true');
+  assert.ok(row().parentElement.querySelector('[data-change="c1"]'), 'the change is drawn under its row');
+  await click(p, row());
+  assert.equal(row().parentElement.querySelector('[data-change="c1"]'), null);
+});
+
+test('Set one up and Ask only put words in the box', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  await click(p, p.button('Set one up'));
+  assert.equal(p.$('#box').value, 'Alert me when ');
+  await click(p, p.button('Ask'));
+  assert.match(p.$('#box').value, /What can connect to QuickBooks/);
+  assert.equal(p.called('specialist_chat_send').length, 0);
+});
+
+test('a home section that could not be read says so, and the rest still shows', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_schedule: { status: 500, body: { detail: 'The scheduler is down' } } } });
+  await session(p);
+  assert.match(section(p, 'Flows and alerts').textContent, /I couldn’t read what is scheduled/);
+  assert.match(section(p, 'Connected systems').textContent, /Acme POS/);
+});
+
+test('what a flow or change is called is text, never markup', async () => {
+  const bad = '<img src=x onerror="window.__hit=1">';
+  const p = mount({ tools: { ...HOME,
+    quickbooks_schedule: { ok: true, drafts: [], items: [{ id: 'x1', kind: 'alert', title: bad, when: bad, paused: true, can: [] }] },
+    quickbooks_changes: { ok: true, waiting_on_me: [], failed: [], my_requests: [{ id: 'x2', summary: bad, status: 'VERIFIED', created_at: '2026-09-27T10:00:00Z' }] },
+    qb_apps: { ok: true, viewer: {}, apps: [{ key: 'z', name: bad, what: bad, connected: true, counts: {}, tasks: [{ name: bad }] }], coming: [{ name: bad, what: bad }] } } });
+  await session(p);
+  assert.equal(p.$('#view img'), null);
+  assert.equal(p.window.__hit, undefined);
+  assert.match(p.text('#view'), /<img src=x/);
+});
+
+test('a day\'s item with no time of its own — a pay period ending — shows no made-up hour', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_calendar: { ok: true, tz: 'America/Chicago', days: [{ date: '2026-09-30', label: 'Wed 30 Sep',
+    items: [{ key: 'pay:1', at: '2026-09-30T17:00:00Z', type: 'pay_period_end', title: 'Weekly pay period ends', status: 'due', time: '' }] }] } } });
+  await session(p);
+  const row = p.$$('#view .rowx').find((r) => /Weekly pay period ends/.test(r.textContent));
+  assert.equal(row.querySelector('.tm').textContent, '');
+});
