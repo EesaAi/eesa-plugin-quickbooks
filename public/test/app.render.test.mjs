@@ -550,3 +550,62 @@ test('a calendar row with no amount shows no made-up $0.00', async () => {
   assert.match(p.text('#view'), /Add vendor Acme Supplies/);
   assert.doesNotMatch(p.text('#view'), /\$0\.00/);
 });
+
+// ── the one line on an empty chat: where things stand ──────────────────
+
+const LIVE_CONN = { ok: true, checked_at: '2026-09-27T15:58:00Z', apps: [], can_connect: true, who_can_connect: [],
+  quickbooks: { state: 'connected', company_name: 'Acme Bistro', checked_at: '2026-09-27T15:58:00Z', evidence: 'probe' } };
+const PAUSED = { ok: true, drafts: [], items: [
+  { id: 'f1', kind: 'alert', title: 'Cash in the bank', paused: true, owner: { name: 'Dana Reyes', is_me: true } },
+  { id: 'f2', kind: 'alert', title: 'Bills to pay', paused: true, owner: { name: 'Dana Reyes', is_me: true } }] };
+
+test('the empty chat says in one line whether QuickBooks answered, what needs you and the schedules', async () => {
+  const p = mount({ tools: { quickbooks_connection: LIVE_CONN, quickbooks_schedule: PAUSED,
+    quickbooks_changes: { ok: true, waiting_on_me: [{ id: 'c1', summary: 'Rent', status: 'PENDING', can_decide: true }],
+                          my_requests: [], failed: [] } } });
+  await session(p);
+  const line = p.text('#status');
+  assert.match(line, /QuickBooks \(Acme Bistro\) answered 2m ago/);
+  assert.match(line, /1 thing needs you/);
+  assert.match(line, /2 schedules, all paused/);
+  assert.equal(p.$('.connect'), null, 'a connected company is not asked to connect');
+  await click(p, p.$('#status [data-act="open-needs"]'));
+  assert.equal(p.text('#title'), 'Waiting on you');
+});
+
+test('a company that is not connected says so and offers Connect; one merely slow does not', async () => {
+  const off = mount({ tools: { quickbooks_connection: { ...LIVE_CONN, quickbooks: { state: 'not_connected' } } } });
+  await session(off);
+  assert.match(off.text('#status'), /QuickBooks isn’t connected here/);
+  assert.ok(off.button('Connect QuickBooks'));
+  const slow = mount({ tools: { quickbooks_connection: { ...LIVE_CONN, quickbooks: { state: 'not_answering' } } } });
+  await session(slow);
+  assert.match(slow.text('#status'), /didn’t answer just now/);
+  assert.equal(slow.button('Connect QuickBooks'), undefined);
+});
+
+test('the line never calls QuickBooks connected when the check failed', async () => {
+  const p = mount({ tools: { quickbooks_connection: { ok: false, error: 'unreadable', message: 'The gateway timed out' } } });
+  await session(p);
+  assert.match(p.text('#status'), /Couldn’t check QuickBooks: The gateway timed out/);
+  assert.doesNotMatch(p.text('#status'), /answered/);
+});
+
+test('schedules that are on say which runs next', async () => {
+  const p = mount({ tools: { quickbooks_connection: LIVE_CONN, quickbooks_schedule: { ok: true, drafts: [], items: [
+    { id: 'f1', title: 'Cash in the bank', paused: false, next_at: '2026-09-28T16:00:00Z', next_time: 'Mon 28 Sep, 9:00 AM' },
+    { id: 'f2', title: 'Bills to pay', paused: false, next_at: '2026-09-29T16:00:00Z', next_time: 'Tue 29 Sep, 9:00 AM' },
+    { id: 'f3', title: 'Old alert', paused: true }] } } });
+  await session(p);
+  assert.match(p.text('#status'), /2 schedules on \(1 paused\) · next: Cash in the bank, Mon 28 Sep, 9:00 AM/);
+});
+
+test('QuickBooks is checked on opening and then at most every five minutes', async () => {
+  const p = mount({ tools: { quickbooks_connection: LIVE_CONN } });
+  await session(p);
+  assert.equal(p.called('quickbooks_connection').length, 1);
+  await settle(p, 60000); await settle(p, 60000); await settle(p, 60000);
+  assert.equal(p.called('quickbooks_connection').length, 1, 'not every minute');
+  await settle(p, 60000); await settle(p, 61000);
+  assert.equal(p.called('quickbooks_connection').length, 2);
+});

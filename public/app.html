@@ -117,6 +117,10 @@
              background: color-mix(in oklch, var(--primary) 10%, transparent); color: var(--primary);
              box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 20%, transparent); }
   .empty h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .status { margin: -8px 0 0; max-width: 520px; font-size: 13px; line-height: 1.55; color: var(--muted-foreground); }
+  .status .bad { color: var(--danger); }
+  .linkish { padding: 0; border: 0; background: none; font: inherit; color: var(--primary); cursor: pointer;
+             text-decoration: underline; text-underline-offset: 2px; }
   .starts { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
   .start { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 1px solid transparent;
            border-radius: 12px; background: color-mix(in oklch, var(--muted) 45%, transparent); cursor: pointer; text-align: left; }
@@ -881,8 +885,40 @@ function starts() {
   if (may('sales')) out.push(['Draft an invoice', 'Draft an invoice for ']);
   return out.slice(0, 6);
 }
+/**
+ * Where things stand, in one line of words (asked for on 28 Sep 2026): whether
+ * QuickBooks answered and when, what needs the person, and their schedules.
+ * Only what the tools said — QuickBooks is never called connected unless it
+ * answered, and a check that failed says so.
+ */
+function statusLine() {
+  var parts = [], c = ST.conn;
+  if (ST.errors.conn) parts.push('<span class="bad">Couldn’t check QuickBooks: ' + esc(ST.errors.conn) + '</span>');
+  else if (!c || !c.state) parts.push('Checking QuickBooks…');
+  else if (c.state === 'CONNECTED') {
+    var at = c.checked_at || c.last_ok_at;
+    parts.push('QuickBooks' + (c.company_name ? ' (' + esc(c.company_name) + ')' : '') + ' answered ' + esc(at ? ago(at) : 'recently'));
+  } else if (UNCONNECTED.indexOf(c.state) !== -1) parts.push('<span class="bad">QuickBooks isn’t connected here</span>');
+  else if (c.state === 'NOT_ANSWERING') parts.push('<span class="bad">QuickBooks didn’t answer just now</span>');
+  else if (c.state !== 'ROLE_FORBIDS') parts.push('QuickBooks not checked yet');
+  var n = decisions();
+  parts.push(n ? '<button class="linkish" data-act="open-needs">' + esc(plural(n, 'thing')) + (n === 1 ? ' needs' : ' need') + ' you</button>'
+               : 'nothing needs you');
+  var items = (ST.sched && (ST.sched.items || ST.sched.schedules)) || [];
+  if (items.length) {
+    var on = items.filter(function (s) { return !s.paused; });
+    var next = on.filter(function (s) { return s.next_at; })
+      .sort(function (a, b) { return Date.parse(a.next_at) - Date.parse(b.next_at); })[0];
+    parts.push(!on.length ? plural(items.length, 'schedule') + ', all paused'
+      : plural(on.length, 'schedule') + ' on' + (items.length > on.length ? ' (' + (items.length - on.length) + ' paused)' : '')
+        + (next ? ' · next: ' + esc(next.title) + (next.next_time ? ', ' + esc(next.next_time) : '') : ''));
+  }
+  var mine = ((ST.changes && ST.changes.my_requests) || []).filter(function (x) { return x.status === 'PENDING'; }).length;
+  if (mine) parts.push(plural(mine, 'change') + ' of yours waiting for approval');
+  return '<p class="status" id="status">' + parts.join(' · ') + '</p>';
+}
 function welcomeView() {
-  return '<div class="empty"><span class="hero-ic">' + ICON.spark + '</span><h2>' + esc(greeting()) + '</h2>'
+  return '<div class="empty"><span class="hero-ic">' + ICON.spark + '</span><h2>' + esc(greeting()) + '</h2>' + statusLine()
     + (ST.noAccess ? '<p class="say">Your QuickBooks role isn’t recorded in Eesa yet — whoever looks after QuickBooks can add it.</p>' : '')
     + (needsConnect() ? '<div style="width:100%;text-align:left">' + qbConnectCard() + '</div>' : '')
     + '<div class="starts">' + starts().map(function (x, i) {
@@ -1232,7 +1268,25 @@ function itemsCard(c) {
 }
 
 /** Connecting QuickBooks: an admin connects; anyone else is told whom to ask. */
-function needsConnect() { return !!(ST.conn && ST.conn.state && ST.conn.state !== 'CONNECTED'); }
+/**
+ * The connection answer in one shape: {state, company_name, checked_at, can_connect, …}.
+ * Eesa's quickbooks_connection nests the company's facts under `quickbooks`
+ * with lower-case states; the page's own marks (not_connected_here) are flat.
+ */
+function connOf(r) {
+  if (!r || typeof r !== 'object') return r;
+  var q = r.quickbooks && typeof r.quickbooks === 'object' ? r.quickbooks : {};
+  return Object.assign({}, r, {
+    state: String(r.state || q.state || '').toUpperCase(),
+    company_name: r.company_name || q.company_name || '',
+    checked_at: r.checked_at || q.checked_at || null,
+    last_ok_at: r.last_ok_at || q.last_ok_at || null,
+    last_error: r.last_error || q.last_error || '',
+  });
+}
+/** Only a company that is not connected — never one merely unchecked or slow — asks to connect. */
+var UNCONNECTED = ['NOT_CONNECTED', 'NEEDS_SIGN_IN', 'DISCONNECTED'];
+function needsConnect() { return !!(ST.conn && UNCONNECTED.indexOf(ST.conn.state) !== -1); }
 function canConnect() { return ST.conn && ST.conn.can_connect != null ? !!ST.conn.can_connect : !!viewer().can_connect; }
 function qbConnectCard(c) {
   var k = ST.conn || { state: 'NOT_CONNECTED', can_connect: !!(c && c.url) }, w = ST.connecting;
@@ -1395,7 +1449,7 @@ function watchConnect(start) {
   if (start) ST.connecting = { since: Date.now() };
   if (!ST.connecting) return;
   connTimer = setTimeout(async function () {
-    try { ST.conn = await call('quickbooks_connection', { action: 'status' }); } catch (e) {}
+    try { ST.conn = connOf(await call('quickbooks_connection', { action: 'status' })); } catch (e) {}
     if (ST.conn && ST.conn.state === 'CONNECTED') {
       ST.connecting = null;
       if (ST.conn.company_name) $('#co').textContent = ST.conn.company_name;
@@ -1747,8 +1801,9 @@ async function loadNeeds() {
     // No QuickBooks read in these: the same minute's poll can afford them.
     newer('quickbooks_calendar', { days: 7, include: ['schedule', 'runs', 'approvals'] }, 'cal'),
     newer('quickbooks_schedule', {}, 'sched'),
-    newer('quickbooks_connection', { action: 'status' }, 'conn'),
+    connDue() ? newer('quickbooks_connection', { action: 'status' }, 'conn') : null,
   ]);
+  if (ST.conn) ST.conn = connOf(ST.conn);
   if (ST.conn && ST.conn.company_name) $('#co').textContent = ST.conn.company_name;
   paintNow();
   var v = viewer(), conn = connected();
@@ -1761,6 +1816,12 @@ async function loadNeeds() {
   }).concat(conn.length && v.sees_pay ? [call('qb_pay_setup', {}).then(function (r) { ST.setup = r; }).catch(function () { ST.setup = null; })] : []));
   paintNow();
   watch();
+}
+/** A live QuickBooks check costs a call to Intuit: once on opening, then at most every five minutes. */
+function connDue() {
+  if (ST.connAt && Date.now() - ST.connAt < 300000) return false;
+  ST.connAt = Date.now();
+  return true;
 }
 /** A tool from a newer Eesa: kept in ST[key] when there, left out quietly when this Eesa has not got it yet. */
 function newer(tool, args, key) {

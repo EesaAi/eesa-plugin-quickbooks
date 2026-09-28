@@ -17,8 +17,10 @@ tokens), bubbles, "Used N steps" trail and floating ask box as Eesa's chat:
 - **A conversation** (`qb_chat`): questions, answers with the steps the agent
   took, and every request made in it as a card with its log and the one
   decision it needs.
-- **An empty chat** is Eesa's: a greeting and a few ways to start that fill the
-  box. No brief, no summary text — the user asked for none.
+- **An empty chat** is Eesa's: a greeting, ONE line saying where things stand
+  (whether QuickBooks answered and when, what needs the person, their
+  schedules — asked for on 28 Sep 2026), and a few ways to start that fill the
+  box. Nothing more: no brief, no other summary text.
 - **One box to type or speak.** Everything goes to the QuickBooks agent, which
   hands setup ("add Alex, $18 an hour") to the attendance assistant.
 
