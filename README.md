@@ -4,7 +4,8 @@ QuickBooks Online as agent tools for Eesa, wrapping **Intuit's official MCP serv
 ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server),
 Apache-2.0) in a thin HTTP bridge.
 
-Deployed at `qb.plugins.bibekpoudel.com`.
+It runs as its own service. Eesa keeps its address on the plugin's connection,
+so no host is written here.
 
 ## Why a bridge exists
 
@@ -27,14 +28,13 @@ physically incapable of that mutation, so a gating bug cannot become a wrong
 journal entry.
 
 **As deployed today: write and update are ON, delete is OFF.** They were turned
-on so the Chups month-end sync (`manage.py qb_post_month`) can post and revise
-journal entries, and they are pointed at the **sandbox** realm, not Chups Inc's
-real books. Delete has never been enabled and there is no reason to enable it —
-nothing in the sync removes anything.
+on so a month-end sync can post and revise journal entries, and they are pointed
+at a **sandbox** company, not real books. Delete has never been enabled and there
+is no reason to enable it — nothing in the sync removes anything.
 
 To put it back to read-only, set `QUICKBOOKS_DISABLE_WRITE=true` and
-`QUICKBOOKS_DISABLE_UPDATE=true` on the *production* (`is_preview: false`) env
-rows in Coolify and redeploy. Note the deploy rebuilds the whole image (~6 min,
+`QUICKBOOKS_DISABLE_UPDATE=true` on the service's production environment and
+redeploy. Note the deploy rebuilds the whole image (~6 min,
 it recompiles Intuit's server from source) and the container only swaps at the
 very end — a tool count read mid-deploy is the *old* container's answer.
 

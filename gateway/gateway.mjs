@@ -253,7 +253,7 @@ function send(res, status, obj) {
 // async because the OAuth callback below exchanges a code before replying.
 const server = http.createServer(async (req, res) => {
   // Liveness. Deliberately unauthenticated and deliberately NOT touching
-  // Intuit — Coolify needs it to answer during boot.
+  // Intuit — the host's health check needs it to answer during boot.
   if (req.method === "GET" && req.url === "/health") {
     return send(res, 200, {
       ok: true, plugin: "quickbooks", connected: !!client, environment: ENVIRONMENT,
