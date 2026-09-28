@@ -241,6 +241,36 @@ async function ensure() {
   return connecting;
 }
 
+/** Text for an HTML page: every value that reaches one is escaped, whoever sent it. */
+function escHtml(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+/**
+ * The /oauth pages. Anybody can open them with any query string, and this
+ * origin also serves the QuickBooks page Eesa frames, so a value reflected
+ * here unescaped was somebody else's script running on the plugin's own
+ * domain. They are escaped, carry no script, and cannot be framed.
+ */
+function oauthPage(res, status, body) {
+  res.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+  });
+  res.end(`<!doctype html><meta charset=utf-8><style>body{font:16px system-ui;padding:40px;max-width:32em}</style>${body}`);
+}
+
+/**
+ * Only a read is sent twice. A write whose child died mid-call may already be
+ * in QuickBooks, and sending it again makes a second bill. Intuit's tools name
+ * their verb first: get_/read_/search_ read; create/update/delete write.
+ */
+function isRead(method, name) {
+  return method !== "tools/call" || /^(get|read|search)[-_]/.test(String(name || ""));
+}
+
 function send(res, status, obj) {
   const b = JSON.stringify(obj);
   res.writeHead(status, {
@@ -269,12 +299,11 @@ const server = http.createServer(async (req, res) => {
     return send(res, ok ? 200 : 503, {
       ok,
       has_token: !!currentRefreshToken,
-      token_store: TOKEN_STORE,
       store_present: fs.existsSync(TOKEN_STORE),
       last_refresh_at: lastRefreshAt,
       last_error: lastRefreshError,
       environment: ENVIRONMENT,
-      realm_id: process.env.QUICKBOOKS_REALM_ID || null,
+      // No company id and no file path: this answers anybody who asks.
     });
   }
   // ── Connecting a QuickBooks company ────────────────────────────────────
@@ -316,15 +345,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && req.url.startsWith("/oauth/callback")) {
     const q = new URL(req.url, "http://x").searchParams;
-    const html = (msg) =>
-      `<!doctype html><meta charset=utf-8><style>body{font:16px system-ui;padding:40px;max-width:32em}</style>${msg}`;
     if (q.get("error")) {
-      res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(html(`<h3>QuickBooks refused the connection</h3><p>${q.get("error")}</p>`));
+      return oauthPage(res, 400, `<h3>QuickBooks refused the connection</h3><p>${escHtml(q.get("error"))}</p>`);
     }
     if (!pendingState || q.get("state") !== pendingState) {
-      res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(html("<h3>That link has expired</h3><p>Start again from the connect link.</p>"));
+      return oauthPage(res, 400, "<h3>That link has expired</h3><p>Start again from the connect link.</p>");
     }
     pendingState = null;
     try {
@@ -346,9 +371,8 @@ const server = http.createServer(async (req, res) => {
       });
       const j = await r.json().catch(() => ({}));
       if (!j.refresh_token) {
-        res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
         // Never echo the body: it can carry the grant.
-        return res.end(html(`<h3>QuickBooks did not issue a token</h3><p>HTTP ${r.status}.</p>`));
+        return oauthPage(res, 502, `<h3>QuickBooks did not issue a token</h3><p>HTTP ${escHtml(r.status)}.</p>`);
       }
       currentRefreshToken = j.refresh_token;
       process.env.QUICKBOOKS_REFRESH_TOKEN = j.refresh_token;
@@ -362,14 +386,12 @@ const server = http.createServer(async (req, res) => {
       // from spawn time and would keep using the old grant until it died.
       try { if (client) { await client.close?.(); } } catch (e) {}
       client = null;
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(html(
-        `<h3>QuickBooks connected</h3><p>Company <code>${realm || "?"}</code>, ` +
-        `${ENVIRONMENT}. ${saved ? "Saved." : "<b>NOT saved — the /data volume is missing.</b>"}</p>` +
-        `<p>You can close this window.</p>`));
+      // No company id on the page: whoever finishes the sign-in sees only that it worked.
+      return oauthPage(res, 200, saved
+        ? "<h3>QuickBooks is connected to Eesa</h3><p>You can close this window.</p>"
+        : "<h3>QuickBooks answered, but the connection was NOT saved</h3><p>The /data volume is missing. Tell whoever runs Eesa.</p>");
     } catch (e) {
-      res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
-      return res.end(html(`<h3>Could not complete the connection</h3><p>${String(e && e.message)}</p>`));
+      return oauthPage(res, 500, `<h3>Could not complete the connection</h3><p>${escHtml(e && e.message)}</p>`);
     }
   }
 
@@ -445,9 +467,10 @@ const server = http.createServer(async (req, res) => {
       }
       return { ok: true };
     };
-    // A child that has died is dropped — killed, not abandoned — and the call
-    // is made once more on a fresh one, so one dead process costs a second and
-    // not an outage. Any other error is the child answering, and is passed on.
+    // A child that has died is dropped — killed, not abandoned — and a READ is
+    // made once more on a fresh one, so one dead process costs a second and
+    // not an outage. A write is not: see isRead. Any other error is the child
+    // answering, and is passed on.
     let c;
     try {
       c = await ensure();
@@ -462,6 +485,15 @@ const server = http.createServer(async (req, res) => {
         });
       }
       if (c) drop(c, "transport dead: " + String((e && e.message) || e).slice(0, 60));
+      if (!isRead(method, msg.params?.name)) {
+        // "Connection closed" is how Eesa's change road knows the outcome is
+        // not known (INDETERMINATE), rather than failed.
+        return send(res, 200, {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32000, message: "Connection closed while this change was being sent to QuickBooks: it may or may not have been made. Check QuickBooks before asking for it again." },
+        });
+      }
     }
     try {
       const fresh = await ensure();
