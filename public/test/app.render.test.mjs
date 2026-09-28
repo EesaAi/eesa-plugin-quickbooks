@@ -687,12 +687,114 @@ test('a flow\'s owner pauses and resumes it from home, as their own tap', async 
   assert.equal(p.$('[data-sched="f1"] [data-do="pause"]'), null, 'a paused one offers Resume, not Pause');
 });
 
-test('a flow that asks QuickBooks for changes asks first when run from home', async () => {
-  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: { ok: true, run_id: 'r9' } } });
+test('home runs only your own alert in one tap; a flow that may ask QuickBooks is run by asking, where its card says what happens', async () => {
+  const p = mount({ tools: HOME });
   await session(p);
-  await click(p, p.$('[data-sched="f2"] [data-act="run-now"]'));
-  assert.equal(p.called('quickbooks_schedule_change').length, 0, 'nothing is run before the person says so');
-  assert.match(p.text(), /Run it now\?/);
+  assert.ok(p.$('[data-sched="f1"] [data-act="run-now"]'), 'your own alert: Run now');
+  assert.equal(p.$('[data-sched="f2"] [data-act="run-now"]'), null, 'a flow: no one-tap Run now');
+});
+
+test('somebody else\'s flow has no buttons on home — an admin changes it by asking, and reads the card', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_schedule: { ok: true, drafts: [], items: [
+    { id: 'o1', kind: 'alert', title: 'Cash watch', when: 'At 09:00 on every day', paused: false,
+      can: ['pause', 'resume', 'run_now', 'delete'], owner: { name: 'Lee Park', is_me: false } }] } } });
+  await session(p);
+  const row = p.$('[data-sched="o1"]');
+  assert.equal(row.querySelectorAll('button').length, 0);
+  assert.match(row.textContent, /Lee Park’s/);
+});
+
+test('a pause that comes back as a card is left for the person, never approved by the page', async () => {
+  const p = mount({ tools: { ...HOME,
+    quickbooks_schedule_change: { ok: true, requires_confirm: true, draft_id: 'dz', card: { type: 'draft', id: 'dz', title: 'Pause it?' } } } });
+  await session(p);
+  await click(p, p.$('[data-sched="f2"] [data-do="pause"]'));
+  assert.equal(p.called('quickbooks_draft_decide').length, 0);
+  assert.match(p.text(), /Check the card under Needs you/);
+});
+
+test('a second tap while the first is on its way sends nothing more', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: { ok: true, message: 'Back on.' } } });
+  await session(p);
+  // Hold the call open, as a slow network would.
+  const real = p.window.fetch;
+  let answer;
+  p.window.fetch = (url, init) => (JSON.parse(init.body).tool === 'quickbooks_schedule_change'
+    ? new Promise((r) => { answer = () => r(real(url, init)); }) : real(url, init));
+  p.$('[data-sched="f1"] [data-do="resume"]').click();
+  await settle(p);
+  const again = p.$('[data-sched="f1"] [data-do="resume"]');
+  assert.ok(again.disabled, 'the button is drawn disabled while its call is out');
+  again.click();
+  await settle(p);
+  assert.equal(p.called('quickbooks_schedule_change').length, 0, 'the held call has not reached the tool yet');
+  answer();
+  await settle(p);
+  assert.equal(p.called('quickbooks_schedule_change').length, 1, 'one tap, one call');
+});
+
+test('the times on home say whose clock they keep, once, at the top', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  const viewer = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (viewer !== 'America/Chicago') assert.match(p.text('.hello'), /Times are America\/Chicago/);
+  assert.equal((p.text('#view').match(/Times are/g) || []).length, viewer !== 'America/Chicago' ? 1 : 0);
+});
+
+test('an app not connected yet is connected from its card under Needs you, which says what it shares — not from a bare button', async () => {
+  const p = mount({ tools: { ...HOME, qb_apps: { ok: true, viewer: { can_connect: true },
+    apps: [{ key: 'acmepos', name: 'Acme POS', what: 'Daily sales', connected: false, counts: {},
+             shares: [{ key: 'sales', title: 'Sales per day', note: 'Totals only.', visible: true }], not_shared: ['Card numbers'], kinds: [] }] } } });
+  await session(p);
+  const systems = section(p, 'Connected systems');
+  assert.equal(systems.querySelector('[data-act="connect"]'), null);
+  assert.match(systems.textContent, /Connecting it is under Needs you, with what it would share/);
+});
+
+test('a change you can try again waits under Needs you, not under Done lately; done is ordered by when it was settled', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_changes: { ok: true, waiting_on_me: [], failed: [], my_requests: [
+    { id: 'r1', summary: 'Bill Oak Supply $12.00', status: 'FAILED', status_label: 'Failed', can_retry: true, created_at: '2026-09-27T09:00:00Z',
+      expires_at: '2026-10-04T09:00:00Z', tool_name: 'create_bill' },
+    { id: 'r0', summary: 'Old test invoice', status: 'FAILED', status_label: 'QuickBooks refused it', can_retry: true, created_at: '2026-09-10T09:00:00Z',
+      expires_at: '2026-09-17T09:00:00Z', tool_name: 'create_invoice' },
+    { id: 'e1', summary: 'Asked first, sent last', status: 'VERIFIED', created_at: '2026-09-20T09:00:00Z', tool_name: 'create_invoice',
+      last_execution: { at: '2026-09-27T15:00:00Z' } },
+    { id: 'e2', summary: 'Asked later, sent earlier', status: 'VERIFIED', created_at: '2026-09-25T09:00:00Z', tool_name: 'create_invoice',
+      last_execution: { at: '2026-09-26T09:00:00Z' } }] } } });
+  await session(p);
+  const needs = section(p, 'Needs you').textContent;
+  assert.match(needs, /Bill Oak Supply/);
+  assert.doesNotMatch(needs, /Old test invoice/, 'a failure past its expiry does not wait on anyone');
+  const done = section(p, 'Done lately').textContent;
+  assert.doesNotMatch(done, /Bill Oak Supply/);
+  assert.match(done, /Old test invoice\s*QuickBooks refused it/);
+  assert.match(done, /Asked first, sent last.*Asked later, sent earlier/s);
+});
+
+test('home leaves out what this Eesa has no tool for, instead of loading forever', async () => {
+  const p = mount({ tools: { ...HOME, quickbooks_calendar: NOT_AVAILABLE, quickbooks_schedule: NOT_AVAILABLE, quickbooks_connection: NOT_AVAILABLE } });
+  await session(p);
+  assert.equal(section(p, 'This week'), undefined);
+  assert.equal(section(p, 'Flows and alerts'), undefined);
+  assert.match(section(p, 'Connected systems').textContent, /QuickBooks\s*Not checked/);
+});
+
+test('an empty conversation is the plain welcome, not the whole board', async () => {
+  const p = mount({ tools: { ...HOME, specialist_chat_conversations: { ok: true, conversations: [{ id: 'cv1', title: 'Old chat', count: 0 }] },
+    qb_chat: { ok: true, items: [] } } });
+  await session(p);
+  await click(p, p.$('[data-act="open-conv"][data-id="cv1"]'));
+  assert.equal(p.$('#view .board'), null);
+  assert.match(p.text('#view'), /Good (morning|afternoon|evening)/);
+});
+
+test('a done row opens from the keyboard', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  const row = p.$('[data-key="done:c1"]');
+  row.dispatchEvent(new p.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await settle(p);
+  assert.equal(p.$('[data-key="done:c1"]').getAttribute('aria-expanded'), 'true');
 });
 
 test('a done row opens to the change itself, and closes again', async () => {
@@ -707,11 +809,14 @@ test('a done row opens to the change itself, and closes again', async () => {
   assert.equal(row().parentElement.querySelector('[data-change="c1"]'), null);
 });
 
-test('Set one up and Ask only put words in the box', async () => {
+test('Set one up and Ask only put words in an empty box, and never replace what was typed', async () => {
   const p = mount({ tools: HOME });
   await session(p);
   await click(p, p.button('Set one up'));
   assert.equal(p.$('#box').value, 'Alert me when ');
+  await click(p, p.button('Ask'));
+  assert.equal(p.$('#box').value, 'Alert me when ', 'what is in the box stays');
+  p.$('#box').value = '';
   await click(p, p.button('Ask'));
   assert.match(p.$('#box').value, /What can connect to QuickBooks/);
   assert.equal(p.called('specialist_chat_send').length, 0);

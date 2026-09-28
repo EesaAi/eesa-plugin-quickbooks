@@ -121,7 +121,7 @@
   .board { display: flex; flex-direction: column; gap: 14px; }
   .lane { display: contents; }
   .sec.needs { order: 1; } .sec.week { order: 2; } .sec.flows { order: 3; } .sec.systems { order: 4; } .sec.done { order: 5; }
-  @media (min-width: 760px) {
+  @media (min-width: 760px) and (max-width: 899px), (min-width: 1080px) {
     .board { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
     .lane { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
   }
@@ -774,6 +774,7 @@ var ST = {
   sruns: {},            // a schedule's recent runs, when its row is opened
   drafts: {},           // draft id -> what became of it here
   held: {},             // drafts a button here was handed back
+  busy: {},             // taps still on their way, by the key of what they act on
   facts: {},            // changes read by id
   noAccess: false,      // no QuickBooks role recorded for this person
   focus: null,          // what a route asked to see
@@ -971,7 +972,7 @@ function statusLine() {
  */
 function welcomeView() {
   return '<div class="home"><div class="hello"><span class="hero-ic">' + ICON.spark + '</span><div><h2>' + esc(greeting()) + '</h2>'
-    + statusLine() + '</div></div>'
+    + statusLine() + tzNote(businessClock()) + '</div></div>'
     + (ST.noAccess ? '<p class="say">Your QuickBooks role isn’t recorded in Eesa yet — whoever looks after QuickBooks can add it.</p>' : '')
     + '<div class="board"><div class="lane">' + needsSection() + doneSection() + '</div>'
     + '<div class="lane">' + weekSection() + flowsSection() + systemsSection() + '</div></div>'
@@ -980,6 +981,13 @@ function welcomeView() {
         return '<button class="startchip" data-act="start" data-i="' + i + '">' + ICON.spark + esc(say.trim() + (/\s$/.test(say) ? '…' : '')) + '</button>';
       }).join('') + '</div></div>';
 }
+/** Whose clock the calendar, flows and tasks keep: the business's, from what Eesa sent. */
+function businessClock() {
+  if (ST.cal && ST.cal.tz) return ST.cal;
+  var s = schedItems().filter(function (x) { return x.tz_label; })[0];
+  return s ? { tz: s.tz_label } : null;
+}
+function schedItems() { return (ST.sched && (ST.sched.items || ST.sched.schedules)) || []; }
 function section(cls, title, icon, n, body, more, bare) {
   return '<section class="sec ' + cls + (bare ? ' bare' : '') + '"><div class="sech"><h3><span class="ic">' + icon + '</span>' + esc(title)
     + (n ? ' <span class="n' + (bare ? '' : ' plain') + '">' + n + '</span>' : '') + '</h3>' + (more || '') + '</div>' + body + '</section>';
@@ -993,22 +1001,24 @@ function needsSection() {
   var body = readError('changes', 'what is waiting for approval') + readError('apps', 'the connected systems')
     + (shown.length ? shown.map(function (c) { return c.html; }).join('')
       : ST.changes || ST.errors.changes ? '<p class="quiet">Nothing needs you right now.</p>' : '<div class="skel" style="width:70%"></div>');
-  var more = cards.length > shown.length ? '<button class="linkish" data-act="open-needs">See all ' + cards.length + '</button>' : '';
+  var more = cards.length > shown.length ? '<button class="linkish" data-act="open-needs">See everything waiting</button>' : '';
   return section('needs', 'Needs you', ICON.wait, decisions(), body, more, true);
 }
 /** This week: every run, pay period and approval the calendar knows, day by day. */
 function weekSection() {
-  var body = ST.errors.cal ? readError('cal', 'the calendar') : !ST.cal ? '<div class="skel" style="width:60%"></div>' : tzNote(ST.cal) + calDays(ST.cal.days);
-  var items = (ST.sched && ST.sched.items) || [], on = items.filter(function (x) { return !x.paused; });
-  if (items.length && !on.length) body += '<p class="quiet">All ' + plural(items.length, 'flow and alert', 'flows and alerts')
-    + ' are paused, so none of them runs this week.</p>';
+  if (MISSING.quickbooks_calendar) return '';   // an Eesa without the calendar yet: nothing to wait for
+  var body = ST.errors.cal ? readError('cal', 'the calendar') : !ST.cal ? '<div class="skel" style="width:60%"></div>' : calDays(ST.cal.days);
+  var items = schedItems(), on = items.filter(function (x) { return !x.paused; });
+  if (items.length && !on.length) body += '<p class="quiet">' + (items.length === 1 ? 'Your one flow or alert is paused, so it doesn’t'
+    : 'All ' + items.length + ' flows and alerts are paused, so none of them') + ' run this week.</p>';
   return section('week', 'This week', ICON.cal, 0, body, '<button class="linkish" data-act="open-calendar">Calendar</button>');
 }
 var KIND_ICON = { alert: 'bell', pull: 'sync', flow: 'zap' };
 var KIND_WORD = { alert: 'Alert', pull: 'Brings data in', flow: 'Flow', report: 'Report' };
 /** Every flow and alert: when it runs, whether it is on, how it last went — and the owner's own pause and run. */
 function flowsSection() {
-  var items = (ST.sched && ST.sched.items) || [];
+  if (MISSING.quickbooks_schedule) return '';
+  var items = schedItems();
   var body = readError('sched', 'what is scheduled');
   if (!ST.sched && !ST.errors.sched) body += '<div class="skel" style="width:70%"></div>';
   else if (!items.length) body += '<p class="quiet">None yet. Say what to watch or do — “alert me when cash drops below $5,000”, “every Monday, send me who owes us”.</p>';
@@ -1017,13 +1027,15 @@ function flowsSection() {
     '<button class="linkish" data-act="say" data-say="Alert me when ">Set one up</button>');
 }
 function flowRow(s) {
-  var k = keep('s:' + s.id, s), can = s.can || [], last = s.last || {}, ran = ST.ran[k] && ST.runs[ST.ran[k]];
+  var k = keep('s:' + s.id, s), last = s.last || {}, ran = ST.ran[k] && ST.runs[ST.ran[k]];
+  var mine = !!(s.owner && s.owner.is_me), can = mine ? s.can || [] : [], busy = ST.busy[k] ? ' disabled' : '';
+  if (ran && RUNNING.indexOf(ran.status) === -1) ran = null;   // a run that ended shows as the last run
   var about = [own(KIND_WORD, s.kind) || 'Scheduled', String(s.when || '').replace(/\s*\([^)]*\)\s*$/, ''),
                !s.paused && (s.next_time || s.next_at) && 'next ' + (s.next_time || when(s.next_at)),
                s.owner && !s.owner.is_me && s.owner.name + '’s'].filter(Boolean).join(' · ');
-  var acts = (s.paused && can.indexOf('resume') !== -1 ? '<button class="btn" data-act="sched-do" data-do="resume" data-key="' + esc(k) + '">Resume</button>' : '')
-    + (!s.paused && can.indexOf('pause') !== -1 ? '<button class="btn" data-act="sched-do" data-do="pause" data-key="' + esc(k) + '">Pause</button>' : '')
-    + (can.indexOf('run_now') !== -1 ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run now</button>' : '');
+  var acts = (s.paused && can.indexOf('resume') !== -1 ? '<button class="btn" data-act="sched-do" data-do="resume" data-key="' + esc(k) + '"' + busy + '>Resume</button>' : '')
+    + (!s.paused && can.indexOf('pause') !== -1 ? '<button class="btn" data-act="sched-do" data-do="pause" data-key="' + esc(k) + '"' + busy + '>Pause</button>' : '')
+    + (s.kind === 'alert' && can.indexOf('run_now') !== -1 ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run now</button>' : '');
   return '<div class="item" data-sched="' + esc(s.id) + '"><span class="fi">' + ICON[own(KIND_ICON, s.kind) || 'zap'] + '</span>'
     + '<div class="main"><b>' + esc(String(s.title || '').replace(/^QuickBooks:\s*/, '')) + '</b> '
     + (s.paused ? '<span class="tag">Paused</span>' : '<span class="tag ok">On</span>')
@@ -1037,9 +1049,10 @@ function systemsSection() {
   var c = ST.conn || {}, apps = (ST.apps && ST.apps.apps) || [], coming = (ST.apps && ST.apps.coming) || [];
   var live = {};
   (c.apps || []).forEach(function (a) { live[a.key] = a; });
-  var qbState = ST.errors.conn ? ['bad', 'Couldn’t check'] : !c.state ? ['', 'Checking…']
+  var qbState = ST.errors.conn ? ['bad', 'Couldn’t check'] : !c.state ? (MISSING.quickbooks_connection ? ['', 'Not checked'] : ['', 'Checking…'])
     : c.state === 'CONNECTED' ? ['ok', 'Connected'] : UNCONNECTED.indexOf(c.state) !== -1 ? ['bad', 'Not connected']
-    : c.state === 'NOT_ANSWERING' ? ['bad', 'Not answering'] : ['', 'Not checked'];
+    : c.state === 'NOT_ANSWERING' ? ['bad', 'Not answering'] : c.state === 'ROLE_FORBIDS' ? ['', 'Your role can’t check it']
+    : ['', 'Not known yet'];
   var body = '<div class="item"><span class="fi qb">' + ICON.plug + '</span><div class="main"><b>QuickBooks</b> <span class="tag '
     + qbState[0] + '">' + esc(qbState[1]) + '</span><small>'
     + esc([c.company_name, c.state === 'CONNECTED' && (c.checked_at || c.last_ok_at) && 'answered ' + ago(c.checked_at || c.last_ok_at),
@@ -1058,9 +1071,8 @@ function systemsSection() {
     }).join('');
     body += '<div class="item"><span class="fi">' + ICON.sync + '</span><div class="main"><b>' + esc(a.name) + '</b> <span class="tag ' + st[0] + '">'
       + esc(st[1]) + '</span><small>' + esc(said) + '</small>' + (counts ? '<small>' + esc(counts) + '</small>' : '')
-      + (feeds ? '<ul class="feeds">' + feeds + '</ul>' : '') + '</div>'
-      + (!a.connected && viewer().can_connect ? '<div class="side-acts"><button class="btn" data-act="connect" data-app="' + esc(a.key) + '">Connect</button></div>' : '')
-      + '</div>';
+      + (feeds ? '<ul class="feeds">' + feeds + '</ul>' : '')
+      + (!a.connected ? '<small>Connecting it is under Needs you, with what it would share.</small>' : '') + '</div></div>';
   });
   coming.forEach(function (a) {
     body += '<div class="item"><span class="fi">' + ICON.sync + '</span><div class="main"><b>' + esc(a.name) + '</b> <span class="tag">Coming</span>'
@@ -1069,15 +1081,25 @@ function systemsSection() {
   return section('systems', 'Connected systems', ICON.plug, 0, readError('apps', 'the connected systems') + body,
     '<button class="linkish" data-act="say" data-say="What can connect to QuickBooks, and what would it fill in?">Ask</button>');
 }
+/** A failed change of the person's own that can still be sent: it waits on them. Past its expiry it is history. */
+function retryable(c) {
+  return c.status === 'FAILED' && !!c.can_retry && !(c.expires_at && Date.parse(c.expires_at) <= Date.now());
+}
+/** When a change was last settled: sent, decided, or — failing both — asked for. */
+function settledAt(c) {
+  var d = (c.decisions || []).map(function (x) { return x.at; }).filter(Boolean).sort().pop();
+  var x = c.last_execution && c.last_execution.at;
+  return (x && (!d || x > d) ? x : d) || c.created_at || '';
+}
 var DONE_ICON = { VERIFIED: ['ok', 'ok'], EXECUTED: ['ok', 'ok'], FAILED: ['bad', 'x'], REJECTED: ['bad', 'x'], CANCELLED: ['', 'x'], EXPIRED: ['', 'x'] };
 /** What the agents did in QuickBooks lately, and how each went; a row opens to the change itself. */
 function doneSection() {
   var ch = ST.changes || {}, seen = {}, rows = [];
-  (ch.my_requests || []).concat(ch.failed || []).forEach(function (c) {
-    if (seen[c.id] || c.status === 'PENDING') return;
+  (ch.my_requests || []).forEach(function (c) {
+    if (seen[c.id] || c.status === 'PENDING' || c.status === 'APPROVED' || retryable(c)) return;
     seen[c.id] = true; rows.push(c);
   });
-  rows.sort(function (a, b) { return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0); });
+  rows.sort(function (a, b) { return Date.parse(settledAt(b) || 0) - Date.parse(settledAt(a) || 0); });
   var body = readError('changes', 'what was done');
   if (!ST.changes && !ST.errors.changes) body += '<div class="skel" style="width:70%"></div>';
   else if (!rows.length) body += '<p class="quiet">Nothing sent to QuickBooks yet. Ask for a change and it shows here once it’s decided.</p>';
@@ -1086,7 +1108,7 @@ function doneSection() {
     return '<div class="item"><span class="fi ' + ic[0] + '">' + ICON[ic[1]] + '</span><div class="main">'
       + '<div class="tap" data-act="toggle" data-key="' + esc(k) + '" role="button" tabindex="0" aria-expanded="' + !!ST.open[k] + '"><b>'
       + esc(c.summary || c.tool_name) + '</b><small>' + esc([c.status_label || c.status, c.requested_by_name,
-        c.created_at && ago(c.created_at)].filter(Boolean).join(' · ')) + '</small></div>'
+        settledAt(c) && ago(settledAt(c))].filter(Boolean).join(' · ')) + '</small></div>'
       + (ST.open[k] ? changeCard(c, true) : '') + '</div></div>';
   }).join('');
   return section('done', 'Done lately', ICON.done, 0, body);
@@ -1111,7 +1133,9 @@ function needsView() {
 function convView() {
   if (ST.items === null) return '<div class="skel" style="width:40%;align-self:flex-end"></div><div class="skel" style="width:80%"></div>';
   var html = ST.errors.conv ? '<div class="card"><p class="say bad">' + esc(ST.errors.conv) + '</p></div>' : '';
-  if (!ST.items.length && !ST.errors.conv) return welcomeView();
+  if (!ST.items.length && !ST.errors.conv) {
+    return '<div class="empty"><span class="hero-ic">' + ICON.spark + '</span><h2>' + esc(greeting()) + '</h2>' + statusLine() + '</div>';
+  }
   return html + ST.items.map(function (it) {
     if (it.type === 'turn') return turnView(it.turn);
     if (it.type === 'request') return requestCard(it.request, it.app);
@@ -1755,6 +1779,15 @@ function findRequest(app, id) {
   return all.filter(function (x) { return x.id === id; })[0];
 }
 
+// A row that acts as a button answers Enter and Space, as a button does.
+document.addEventListener('keydown', function (e) {
+  var t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t && t.matches && t.matches('[role="button"][data-act]')) {
+    e.preventDefault();
+    t.click();
+  }
+});
+
 document.addEventListener('toggle', function (e) {
   var d = e.target;
   if (d.matches && d.matches('details[data-keep]')) ST.open[d.getAttribute('data-keep')] = d.open;
@@ -1914,15 +1947,28 @@ document.addEventListener('click', async function (e) {
     }
     if (act === 'toggle' || act === 'steps') { ST.open[b.dataset.key] = !ST.open[b.dataset.key]; paintView(); return; }
     if (act === 'sched-do') {
-      var sc = HELD[b.dataset.key];
-      if (!sc) return;
-      b.disabled = true;
-      var did = await tapped('quickbooks_schedule_change', { id: sc.id, action: b.dataset.do });
-      toast((did && did.message) || (b.dataset.do === 'pause' ? 'Paused' : 'Resumed'));
+      var sk = b.dataset.key, sc = HELD[sk];
+      if (!sc) return;   // drawn disabled while its call is out, and a disabled button is not heard
+      ST.busy[sk] = true;
+      paintView();
+      try {
+        // The owner's own pause and resume happen at once (Eesa says so in the answer). Anything
+        // that comes back as a card instead is left for the person to read and decide.
+        var did = await call('quickbooks_schedule_change', { id: sc.id, action: b.dataset.do });
+        if (did && (did.draft_id || (did.card && did.card.type === 'draft'))) {
+          ST.held['sched:' + sc.id] = did.card || { type: 'draft', id: did.draft_id, title: did.message || 'Go ahead?' };
+          toast('Check the card under Needs you');
+        } else toast((did && did.message) || (b.dataset.do === 'pause' ? 'Paused' : 'Resumed'));
+      } finally { delete ST.busy[sk]; }
       await loadNeeds();
       return;
     }
-    if (act === 'say') { $('#box').value = b.dataset.say || ''; autosize(); $('#box').focus(); return; }
+    if (act === 'say') {
+      var box = $('#box');
+      if (!box.value.trim()) box.value = b.dataset.say || '';
+      autosize(); box.focus();
+      return;
+    }
     if (act === 'start') {
       var pick = starts()[Number(b.dataset.i)];
       if (pick) { $('#box').value = pick[1]; autosize(); $('#box').focus(); }
@@ -2032,8 +2078,12 @@ function needCards() {
   (ch.waiting_on_me || []).forEach(function (c) {
     out.push({ key: 'c:' + c.id, html: changeCard(c, false), decide: !!c.can_decide, inline: !!ST.inline['c:' + c.id] });
   });
-  (ch.failed || []).forEach(function (c) {
-    if (c.can_retry) out.push({ key: 'c:' + c.id, html: changeCard(c, false), decide: true, inline: !!ST.inline['c:' + c.id] });
+  var retry = {};
+  (ch.failed || []).concat((ch.my_requests || []).filter(retryable)).forEach(function (c) {
+    if (c.can_retry && !retry[c.id]) {
+      retry[c.id] = true;
+      out.push({ key: 'c:' + c.id, html: changeCard(c, false), decide: true, inline: !!ST.inline['c:' + c.id] });
+    }
   });
   // What the agents drafted for this person, in any conversation.
   (sc.drafts || []).forEach(function (d) {
