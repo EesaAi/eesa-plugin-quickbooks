@@ -568,6 +568,7 @@ test('the empty chat says in one line whether QuickBooks answered, what needs yo
   assert.match(line, /QuickBooks \(Acme Bistro\) answered 2m ago/);
   assert.match(line, /1 thing needs you/);
   assert.match(line, /2 schedules, all paused/);
+  assert.equal(p.called('quickbooks_schedule')[0].args.include_paused, true, 'paused schedules are asked for');
   assert.equal(p.$('.connect'), null, 'a connected company is not asked to connect');
   await click(p, p.$('#status [data-act="open-needs"]'));
   assert.equal(p.text('#title'), 'Waiting on you');
@@ -608,4 +609,11 @@ test('QuickBooks is checked on opening and then at most every five minutes', asy
   assert.equal(p.called('quickbooks_connection').length, 1, 'not every minute');
   await settle(p, 60000); await settle(p, 61000);
   assert.equal(p.called('quickbooks_connection').length, 2);
+});
+
+test('a paused schedule whose last run failed does not wait on you', async () => {
+  const p = mount({ tools: { quickbooks_connection: LIVE_CONN, quickbooks_schedule: { ok: true, drafts: [], items: [
+    { id: 'f9', title: 'Old cash alert', paused: true, last: { status: 'failed' }, owner: { name: 'Dana Reyes', is_me: true } }] } } });
+  await session(p, { route: { view: 'needs' } });
+  assert.equal(p.$('[data-sched="f9"]'), null);
 });

@@ -1800,7 +1800,8 @@ async function loadNeeds() {
       .catch(function (e) { ST.errors.apps = e.message; }) : null,
     // No QuickBooks read in these: the same minute's poll can afford them.
     newer('quickbooks_calendar', { days: 7, include: ['schedule', 'runs', 'approvals'] }, 'cal'),
-    newer('quickbooks_schedule', {}, 'sched'),
+    // Paused ones too: the line counts them, and a paused schedule is still theirs.
+    newer('quickbooks_schedule', { include_paused: true }, 'sched'),
     connDue() ? newer('quickbooks_connection', { action: 'status' }, 'conn') : null,
   ]);
   if (ST.conn) ST.conn = connOf(ST.conn);
@@ -1861,7 +1862,7 @@ function needCards() {
   });
   // My scheduled work that did not run; and work whose owner no longer can.
   (sc.items || sc.schedules || []).forEach(function (s) {
-    if (s.owner && s.owner.is_me && s.last && RERUN.indexOf(s.last.status) !== -1) out.push({ key: 's:' + s.id, html: scheduleCard(s), decide: true });
+    if (!s.paused && s.owner && s.owner.is_me && s.last && RERUN.indexOf(s.last.status) !== -1) out.push({ key: 's:' + s.id, html: scheduleCard(s), decide: true });
   });
   (sc.owner_needed || []).forEach(function (o) { out.push({ key: 'o:' + o.id, html: ownerCard(o), decide: true }); });
   connected().forEach(function (a) {
