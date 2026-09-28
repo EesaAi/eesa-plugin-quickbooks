@@ -1035,14 +1035,39 @@ function flowRow(s) {
                s.owner && !s.owner.is_me && s.owner.name + '’s'].filter(Boolean).join(' · ');
   var acts = (s.paused && can.indexOf('resume') !== -1 ? '<button class="btn" data-act="sched-do" data-do="resume" data-key="' + esc(k) + '"' + busy + '>Resume</button>' : '')
     + (!s.paused && can.indexOf('pause') !== -1 ? '<button class="btn" data-act="sched-do" data-do="pause" data-key="' + esc(k) + '"' + busy + '>Pause</button>' : '')
-    + (s.kind === 'alert' && can.indexOf('run_now') !== -1 ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run now</button>' : '');
+    + ((s.kind === 'alert' || s.kind === 'pull') && can.indexOf('run_now') !== -1 ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run now</button>' : '');
   return '<div class="item" data-sched="' + esc(s.id) + '"><span class="fi">' + ICON[own(KIND_ICON, s.kind) || 'zap'] + '</span>'
-    + '<div class="main"><b>' + esc(String(s.title || '').replace(/^QuickBooks:\s*/, '')) + '</b> '
+    + '<div class="main"><b>' + esc(flowTitle(s.title, s.id)) + '</b> '
     + (s.paused ? '<span class="tag">Paused</span>' : '<span class="tag ok">On</span>')
     + '<small>' + esc(about) + '</small>'
     + (ran ? '<small>Now ' + tag(ran.status) + '</small>'
       : last.status ? '<small>Last run ' + esc(last.at ? ago(last.at) : '') + ' ' + tag(last.status) + (last.said ? ' ' + esc(last.said) : '') + '</small>' : '')
     + '</div><div class="side-acts">' + acts + '</div></div>';
+}
+var DAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** When a task runs, in words: "daily 07:00", "Mon, Wed 06:30", "on the 1st 09:00". */
+function taskWhen(sc) {
+  sc = sc || {};
+  if (sc.at) return (sc.every === 'day' ? 'daily ' : '') + sc.at;
+  var times = (sc.times_of_day || []).join(', ');
+  if (!times) return '';
+  var dom = sc.days_of_month || [], dow = sc.days_of_week || [];
+  var days = dom.length ? 'on the ' + dom.map(function (d) { return d === 31 ? 'last day' : d + (d === 1 || d === 21 ? 'st' : d === 2 || d === 22 ? 'nd' : d === 3 || d === 23 ? 'rd' : 'th'); }).join(', ')
+    : dow.length && dow.length < 7 ? dow.map(function (d) { return DAY[d] || ''; }).join(', ') : 'daily';
+  return days + ' ' + times;
+}
+/** The connected-app task a pull flow runs, when Eesa says which. */
+function taskOfFlow(id) {
+  var out = null;
+  ((ST.apps && ST.apps.apps) || []).forEach(function (a) {
+    (a.tasks || []).forEach(function (t) { if (t.flow_id && t.flow_id === id) out = t; });
+  });
+  return out;
+}
+/** A flow's title, with the pay period that tells two of the same kind apart. */
+function flowTitle(title, id) {
+  var t = taskOfFlow(id), pay = t && t.pay_schedule && t.pay_schedule.name;
+  return String(title || '').replace(/^QuickBooks:\s*/, '') + (pay ? ' · ' + pay + ' pay period' : '');
 }
 /** Each system and what it feeds QuickBooks — checked, with the time it was checked. */
 function systemsSection() {
@@ -1064,9 +1089,9 @@ function systemsSection() {
     var counts = [n.waiting && plural(n.waiting, 'item') + ' waiting', n.ready && n.ready + ' ready to post', n.posted && n.posted + ' posted',
                   n.failed && n.failed + ' failed'].filter(Boolean).join(' · ');
     var feeds = (a.tasks || []).map(function (t) {
-      var sc = t.schedule || {}, pay = t.pay_schedule && t.pay_schedule.name;
+      var sc = taskWhen(t.schedule), pay = t.pay_schedule && t.pay_schedule.name;
       return '<li>→ ' + esc(t.name || t.kind_name || '') + (pay ? ' · ' + esc(pay) + ' pay period' : '')
-        + (sc.at ? ' · ' + esc((sc.every === 'day' ? 'daily ' : '') + sc.at) : '')
+        + (sc ? ' · ' + esc(sc) : '')
         + (t.paused || t.is_on === false ? ' · off' : t.last_run_at ? ' · ran ' + esc(ago(t.last_run_at)) : '') + '</li>';
     }).join('');
     body += '<div class="item"><span class="fi">' + ICON.sync + '</span><div class="main"><b>' + esc(a.name) + '</b> <span class="tag ' + st[0] + '">'
@@ -1556,7 +1581,7 @@ function calRow(it) {
   var rerun = !ran && RERUN.indexOf(it.status) !== -1 && (!it.can || it.can.indexOf('run_now') !== -1);
   return '<div class="rowx"' + (sched ? ' data-act="cal-row" data-key="' + esc(k) + '" role="button" tabindex="0"' : '') + '>'
     + '<span class="tm">' + esc(it.local_time || it.time || (sched ? clock(it.at) : '')) + '</span><span class="fi">' + (sched ? ICON.bell : ICON.clock) + '</span>'
-    + '<div class="main">' + esc(it.title) + (it.detail ? '<small>' + esc(it.detail) + '</small>' : '') + '</div>'
+    + '<div class="main">' + esc(sched ? flowTitle(it.title, it.source_id || it.id) : it.title) + (it.detail ? '<small>' + esc(it.detail) + '</small>' : '') + '</div>'
     + tag(ran ? ran.status : it.status) + (it.amount !== '' && it.amount != null && isFinite(Number(it.amount)) ? '<span class="num">' + cash(it.amount) + '</span>' : '')
     + (rerun ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run it now</button>' : '') + '</div>'
     + (sched && ST.open[k] ? recentRuns(id) : '');

@@ -848,3 +848,25 @@ test('a day\'s item with no time of its own — a pay period ending — shows no
   const row = p.$$('#view .rowx').find((r) => /Weekly pay period ends/.test(r.textContent));
   assert.equal(row.querySelector('.tm').textContent, '');
 });
+
+test('connected-app tasks that run as flows: their times in words, Run now for your own pull, and pay periods that tell two apart', async () => {
+  const p = mount({ tools: { ...HOME,
+    qb_apps: { ok: true, viewer: { can_connect: true }, apps: [{ key: 'acmepos', name: 'Acme POS', what: 'Hours', connected: true, counts: {},
+      tasks: [
+        { id: 't1', name: 'Post hours', flow_id: 'p1', schedule: { times_of_day: ['06:30'], days_of_week: [0, 2], days_of_month: [], timezone: 'America/Chicago' }, is_on: true },
+        { id: 't2', name: 'Post wages', flow_id: 'p2', pay_schedule: { name: 'Weekly' }, schedule: { times_of_day: ['09:00'], days_of_week: [], days_of_month: [1] }, is_on: true },
+        { id: 't3', name: 'Post wages', flow_id: 'p3', pay_schedule: { name: 'Monthly' }, schedule: { times_of_day: ['07:00'], days_of_week: [], days_of_month: [] }, is_on: true }] }] },
+    quickbooks_schedule: { ok: true, drafts: [], items: [
+      { id: 'p2', kind: 'pull', title: 'Post wages', when: 'At 09:00 on the 1st', paused: false, can: ['pause', 'run_now'], owner: { name: 'Dana Reyes', is_me: true } },
+      { id: 'p3', kind: 'pull', title: 'Post wages', when: 'At 07:00 on every day', paused: false, can: ['pause', 'run_now'], owner: { name: 'Dana Reyes', is_me: true } }] } } });
+  await session(p);
+  const systems = section(p, 'Connected systems').textContent;
+  assert.match(systems, /→ Post hours · Mon, Wed 06:30/);
+  assert.match(systems, /→ Post wages · Weekly pay period · on the 1st 09:00/);
+  assert.match(systems, /→ Post wages · Monthly pay period · daily 07:00/);
+  const flows = section(p, 'Flows and alerts').textContent;
+  assert.match(flows, /Post wages · Weekly pay period/);
+  assert.match(flows, /Post wages · Monthly pay period/);
+  assert.match(flows, /Brings data in/);
+  assert.ok(p.$('[data-sched="p2"] [data-act="run-now"]'), 'your own pull runs now in one tap: it only reads');
+});
