@@ -870,3 +870,124 @@ test('connected-app tasks that run as flows: their times in words, Run now for y
   assert.match(flows, /Brings data in/);
   assert.ok(p.$('[data-sched="p2"] [data-act="run-now"]'), 'your own pull runs now in one tap: it only reads');
 });
+
+// ── a connected app's items: why they wait, the wage journal, two tasks, a retry ──
+const CLOCK = ({ counts = {}, overlaps = [] } = {}) => ({ ok: true, viewer: { matches: true, sees_staff: true },
+  apps: [{ key: 'clock', name: 'Clockwise', what: 'Hours', connected: true, counts, overlaps, kinds: [] }] });
+const REQUEST = (refs) => ({ ok: true, recent: [], open: [{ id: 'r1', status: 'DRAFTING', words: 'Pay Sam Rivera', refs,
+  types: ['set_pay'], steps: [], findings: [], log: [], created_at: '2026-09-27T15:00:00Z' }] });
+const PEOPLE = { ok: true, people: [{ ref: '12', name: 'Lena Ortiz' }, { ref: '14', name: 'Omar Haddad', match: { status: 'SUGGESTED' } },
+                                    { ref: '9', name: 'Kai Moreno', match: { status: 'CONFIRMED' } }] };
+const APPROVAL = { why: 'approval', words: '15 days wait for a manager’s approval in Clockwise', from: '2026-09-16', to: '2026-09-27',
+  people: [{ ref: '9', name: 'Kai Moreno', days: 9 }, { ref: '12', name: 'Lena Ortiz', days: 6 }], refs: ['9', '12'],
+  can_approve: true, next: 'Clockwise skips, and says why, any day still checked in.',
+  act: { label: 'Approve these days', tool: 'qb_clock_approve_days', args: { from: '2026-09-16', to: '2026-09-27', employee_refs: ['9', '12'] } } };
+const STILL_IN = { why: 'open', words: '1 day still checked in', from: '2026-09-23', to: '2026-09-23',
+  people: [{ ref: '14', name: 'Omar Haddad', days: 1 }], next: 'They come in once they check out.' };
+const UNMATCHED = { why: 'match', words: 'Lena Ortiz and Omar Haddad aren’t matched to QuickBooks employees', can_match: true,
+  people: [{ ref: '12', name: 'Lena Ortiz', days: 0 }, { ref: '14', name: 'Omar Haddad', days: 0 }] };
+
+test('why items wait: one card per reason, and the one tap Eesa names asks as me and says what came back', async () => {
+  const p = mount({ tools: {
+    qb_apps: CLOCK({ counts: { waiting: 16 } }), qb_requests: REQUEST(['3']), qb_people: PEOPLE,
+    qb_review: { ok: true, items: [], waiting: [APPROVAL, STILL_IN, UNMATCHED] },
+    qb_clock_approve_days: { ok: true, approved: [{ day: '2026-09-16' }], skipped: [], message: '14 approved, 1 skipped: still checked in.' },
+  } });
+  await session(p, { route: { view: 'needs' } });
+  const approval = p.$('[data-wait="approval"]');
+  assert.match(approval.textContent, /15 days wait for a manager’s approval in Clockwise/);
+  assert.match(approval.textContent, /Kai Moreno 9 · Lena Ortiz 6 · 16 Sep – 27 Sep/);
+  assert.match(p.text('[data-wait="open"]'), /1 day still checked in[\s\S]*Omar Haddad 1 · 23 Sep[\s\S]*They come in once they check out/);
+  assert.equal(p.$('[data-wait="match"]'), null, 'the Sort them out card says it, with its button');
+  assert.match(p.text('#view'), /Lena Ortiz and Omar Haddad aren’t matched to QuickBooks employees/);
+  assert.ok(p.button('Sort them out'), 'offered while a request about somebody else is open');
+  await click(p, p.button('Approve these days', '[data-wait="approval"]'));
+  assert.deepEqual(p.called('qb_clock_approve_days').map((c) => c.args), [{ from: '2026-09-16', to: '2026-09-27', employee_refs: ['9', '12'] }]);
+  assert.match(p.text('.toast'), /14 approved, 1 skipped: still checked in\./);
+});
+
+test('people an open request is already about are left to it; tapping Sort them out is not offered twice', async () => {
+  const p = mount({ tools: { qb_apps: CLOCK({ counts: { waiting: 1 } }), qb_requests: REQUEST(['12', '14']), qb_people: PEOPLE,
+                             qb_review: { ok: true, items: [], waiting: [] } } });
+  await session(p, { route: { view: 'needs' } });
+  assert.equal(p.button('Sort them out'), undefined);
+  const q = mount({ tools: { qb_apps: CLOCK({ counts: { waiting: 1 } }), qb_requests: REQUEST(['3']), qb_people: PEOPLE,
+                             qb_review: { ok: true, items: [], waiting: [] } } });
+  await session(q, { route: { view: 'needs' } });
+  await click(q, q.button('Sort them out'));
+  assert.equal(q.called('specialist_chat_send').length, 1);
+  q.window.eval('paintView()');
+  assert.equal(q.button('Sort them out'), undefined);
+});
+
+test('somebody who may not approve the days is told who does, and gets no button', async () => {
+  const { act, ...seen } = APPROVAL;
+  void act;
+  const p = mount({ tools: { qb_apps: CLOCK({ counts: { waiting: 15 } }), qb_requests: { ok: true, open: [], recent: [] },
+    qb_review: { ok: true, items: [], waiting: [{ ...seen, can_approve: false, next: 'An admin approves them — Dana Reyes.' }] } } });
+  await session(p, { route: { view: 'needs' } });
+  assert.match(p.text('[data-wait="approval"]'), /An admin approves them — Dana Reyes\./);
+  assert.equal(p.$('[data-wait="approval"] button'), null);
+});
+
+test('a wage journal is its own card: the amount is typed back, then it says who approves second', async () => {
+  const items = [
+    { id: 'j1', status: 'REVIEW', title: 'Wages · 21 Sep – 27 Sep 2026', amount: '250.00', noun: 'journal entry', kind: 'journal_entry',
+      task: { owner: ME.email }, needs: { approvals: 2, type_amount: true, amount: '250.00' },
+      lines: [{ side: 'Debit', account: 'Wages', description: 'Kai Moreno', amount: 250 }, { side: 'Credit', account: 'Wages owed', description: 'Owed', amount: 250 }] },
+    { id: 't1', status: 'REVIEW', title: 'Kai Moreno · Mon 21 Sep', noun: 'time activity', kind: 'time_activity',
+      task: { owner: ME.email }, needs: { approvals: 1, type_amount: false } }];
+  const p = mount({ tools: {
+    qb_apps: CLOCK({ counts: { ready_for_me: 2 } }), qb_requests: { ok: true, open: [], recent: [] },
+    qb_review: (args) => args.action !== 'post' ? { ok: true, items, waiting: [] }
+      : args.ids[0] === 'j1' ? { ok: true, posted: ['j1'], refused: [], waiting: [{ id: 'j1', approvers: ['Sam Rivera'] }] }
+      : { ok: true, posted: args.ids, refused: [], waiting: [] },
+  } });
+  await session(p, { route: { view: 'needs' } });
+  assert.match(p.text('#view'), /1 time activity ready to post/);
+  await click(p, p.button('Post 1'));
+  assert.deepEqual(p.called('qb_review').filter((c) => c.args.action === 'post')[0].args, { app: 'clock', action: 'post', ids: ['t1'] });
+  assert.match(p.text('[data-journal="j1"]'), /Debit Wages · Kai Moreno[\s\S]*then a second approver approves it/);
+  await click(p, p.button('Post it', '[data-journal="j1"]'));
+  const amt = p.$('#jeAmt');
+  amt.value = '25'; amt.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  assert.ok(p.$('#dlgOk').disabled, 'not until it is the amount');
+  amt.value = '$250'; amt.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  await click(p, p.$('#dlgOk'));
+  assert.deepEqual(p.called('qb_review').filter((c) => c.args.action === 'post')[1].args,
+                   { app: 'clock', action: 'post', ids: ['j1'], confirmed_amount: '$250' });
+  assert.match(p.$$('.toast').pop().textContent, /Confirmed — it waits for Sam Rivera to approve it/);
+});
+
+test('two wage tasks on one pay period: keeping one deletes the other, as my tap', async () => {
+  const both = [{ id: 'a', name: 'Wages', accounts: 'Wages ← Wages owed', mine: true, first: true },
+                { id: 'b', name: 'Labor', accounts: 'Labor ← Cash', mine: true }];
+  const p = mount({ tools: { qb_apps: CLOCK({ overlaps: [{ words: '2 wage tasks post the Weekly pay period', schedules: ['Weekly'], tasks: both }] }),
+                             qb_requests: { ok: true, open: [], recent: [] }, qb_tasks: { ok: true, message: 'Deleted.' } } });
+  await session(p, { route: { view: 'needs' } });
+  assert.match(p.text('[data-overlap="0"]'), /2 wage tasks post the Weekly pay period[\s\S]*Labor ← Cash · yours[\s\S]*Nothing posts for it until one is kept/);
+  await click(p, p.button('Keep “Wages”'));
+  await click(p, p.$('#dlgOk'));
+  assert.deepEqual(p.called('qb_tasks').map((c) => c.args), [{ app: 'clock', action: 'delete', id: 'b' }]);
+  // Only a task that is mine is deleted by my tap: Labor is somebody else's, so I may keep it, not drop it.
+  const theirs = { ...both[1], mine: false, owner_name: 'Sam Rivera' };
+  const q = mount({ tools: { qb_apps: CLOCK({ overlaps: [{ words: '2 wage tasks post the Weekly pay period', schedules: ['Weekly'],
+    tasks: [both[0], theirs] }] }), qb_requests: { ok: true, open: [], recent: [] } } });
+  await session(q, { route: { view: 'needs' } });
+  assert.deepEqual(q.$$('[data-overlap="0"] button').map((b) => b.textContent), ['Keep “Labor”']);
+  const r = mount({ tools: { qb_apps: CLOCK({ overlaps: [{ words: '2 wage tasks post the Weekly pay period', schedules: ['Weekly'],
+    tasks: [{ ...both[0], mine: false, owner_name: 'Sam Rivera' }, theirs] }] }), qb_requests: { ok: true, open: [], recent: [] } } });
+  await session(r, { route: { view: 'needs' } });
+  assert.equal(r.$('[data-overlap="0"] button'), null);
+  assert.match(r.text('[data-overlap="0"]'), /Only Sam Rivera can delete their task\./);
+});
+
+test('Try again on something QuickBooks refused asks for it again', async () => {
+  const p = mount({ tools: { qb_apps: CLOCK({ counts: { failed: 1 } }), qb_requests: { ok: true, open: [], recent: [] },
+    qb_review: (args) => args.action === 'retry' ? { ok: true, posted: ['f1'], refused: [], waiting: [] }
+      : { ok: true, waiting: [], items: [{ id: 'f1', status: 'FAILED', title: 'Kai Moreno · Mon 21 Sep', reason: 'Invalid Reference Id: Employee' }] } } });
+  await session(p, { route: { view: 'needs' } });
+  await click(p, p.button('Try again'));
+  assert.deepEqual(p.called('qb_review').filter((c) => c.args.action === 'retry')[0].args, { app: 'clock', action: 'retry', ids: ['f1'] });
+  assert.match(p.text('.toast'), /1 entry sent to QuickBooks/);
+});

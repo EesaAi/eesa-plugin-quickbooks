@@ -774,6 +774,7 @@ var ST = {
   sruns: {},            // a schedule's recent runs, when its row is opened
   drafts: {},           // draft id -> what became of it here
   held: {},             // drafts a button here was handed back
+  sorting: {},          // app -> when "Sort them out" was tapped, so its card is not offered twice
   busy: {},             // taps still on their way, by the key of what they act on
   facts: {},            // changes read by id
   noAccess: false,      // no QuickBooks role recorded for this person
@@ -1470,7 +1471,7 @@ function dayRow(i, app, extra) {
     return '<div class="line"><span>' + esc(f.label) + '</span><span class="num">' + esc(f.value) + '</span></div>'; }).join('');
   return '<div class="rowx" data-item="' + esc(i.id) + '"><div class="main"><span>' + esc(i.title) + ' <span class="tag ' + chip[0] + '">' + chip[1] + '</span></span>'
     + (i.detail ? '<small>' + esc(i.detail) + '</small>' : '') + (figs ? '<div class="lines">' + figs + '</div>' : '')
-    + (i.reason && i.status !== 'REVIEW' ? '<small>' + esc(i.reason) + '</small>' : '') + '</div>'
+    + (i.reason ? '<small>' + esc(i.reason) + '</small>' : '') + '</div>'
     + (i.amount != null ? '<span class="num">' + cash(i.amount) + '</span>' : '')
     + (chip[1] === 'AMBER' && i.status === 'WAITING' ? '<button class="btn" data-act="release" data-id="' + esc(i.id) + '" data-app="' + esc(app) + '">Release with a reason</button>' : '')
     + (extra || '') + '</div>';
@@ -1927,13 +1928,13 @@ document.addEventListener('click', async function (e) {
     }
     if (act === 'sort-people') {
       // Handed to the agent like anything else said here: a new conversation.
+      ST.sorting[app] = Date.now();
       return sendMessage('Match everybody who is not matched to QuickBooks yet to their QuickBooks employee, or add them '
         + 'if they are not there. Ask me about anybody you are not sure of.');
     }
     if (act === 'post') {
-      var me = (ACCESS && ACCESS.email) || '';
-      var ids = (((ST.review[app] || {}).items) || []).filter(function (i) { return i.status === 'REVIEW' && i.task && i.task.owner === me; })
-        .map(function (i) { return i.id; });
+      // Not a journal whose amount is typed back: that is posted from its own card.
+      var ids = mineReady({ key: app }).filter(function (i) { return !needsAmount(i); }).map(function (i) { return i.id; });
       if (!ids.length) return;
       b.disabled = true; b.textContent = 'Posting…';
       var out = await call('qb_review', { app: app, action: 'post', ids: ids });
@@ -1951,10 +1952,53 @@ document.addEventListener('click', async function (e) {
       if (ok) await loadNeeds();
       return;
     }
-    if (act === 'bring-back') {
-      await call('qb_review', { app: app, action: 'bring_back', ids: [id] });
-      toast('Brought back — it is checked again on the next run');
+    if (act === 'retry-item') {
+      // Asked for again, as a new change you confirm; the refused one is withdrawn.
+      b.disabled = true;
+      var again = await call('qb_review', { app: app, action: 'retry', ids: [id] });
+      toast(again.refused.length ? again.refused[0].error : afterPost(again));
       await loadNeeds();
+      return;
+    }
+    if (act === 'wait-act') {
+      // The one tap Eesa named for why these wait (Approve these days): the card
+      // is the decision, and the app it asks says what it did and skipped.
+      var x = HELD[b.dataset.key];
+      if (!x) return;
+      WRITES[x.tool] = 1;   // an action changes something: never sent twice
+      b.disabled = true; b.textContent = 'Working…';
+      var did = await tapped(x.tool, x.args || {});
+      toast(did.message || 'Done');
+      await loadNeeds();
+      return;
+    }
+    if (act === 'keep-task') {
+      var k = HELD[b.dataset.key];
+      if (!k) return;
+      var kept = await dialog({ title: 'Keep “' + k.keep.name + '”?', ok: 'Delete the other', danger: true,
+        sub: 'Deletes ' + k.drop.map(function (t) { return '“' + esc(t.name) + '”'; }).join(' and ')
+          + '. What it brought in stays; “' + esc(k.keep.name) + '” posts this pay period from now on.',
+        submit: async function () {
+          for (var n = 0; n < k.drop.length; n++) await tapped('qb_tasks', { app: app, action: 'delete', id: k.drop[n].id });
+        } });
+      if (kept) { toast('Deleted — “' + k.keep.name + '” posts it'); await loadNeeds(); }
+      return;
+    }
+    if (act === 'post-journal') {
+      var je = mineReady({ key: app }).filter(function (i) { return i.id === id; })[0];
+      if (!je) return;
+      var expected = Number((je.needs && je.needs.amount) || je.amount).toFixed(2), posted = null;
+      var done = await dialog({ title: 'Post ' + je.title + '?', ok: 'Post it',
+        sub: je.needs && je.needs.approvals > 1 ? 'Your confirmation is its first approval; a second approver approves it next.' : 'It is sent once you confirm.',
+        body: '<label for="jeAmt">Type the amount to confirm: ' + esc(expected) + '</label>'
+          + '<input id="jeAmt" inputmode="decimal" placeholder="' + esc(expected) + '" autocomplete="off">',
+        validate: function (v) { return normalizeAmount(v.querySelector('#jeAmt').value) === expected ? null : 'amount'; },
+        collect: function (v) { return { amount: v.querySelector('#jeAmt').value.trim() }; },
+        submit: async function (v) {
+          posted = await call('qb_review', { app: app, action: 'post', ids: [id], confirmed_amount: v.amount });
+          if (posted.refused.length) throw new Error(posted.refused[0].error);
+        } });
+      if (done) { toast(afterPost(posted)); await loadNeeds(); }
       return;
     }
     if (act === 'draft') {
@@ -2120,10 +2164,14 @@ function needCards() {
   });
   (sc.owner_needed || []).forEach(function (o) { out.push({ key: 'o:' + o.id, html: ownerCard(o), decide: true }); });
   connected().forEach(function (a) {
-    ((ST.review[a.key] || {}).items || []).forEach(function (i) {
+    var rv = ST.review[a.key] || {};
+    (rv.items || []).forEach(function (i) {
       if (i.status === 'WAITING' && String(i.verdict || '').toUpperCase() === 'AMBER') {
         out.push({ key: 'i:' + i.id, html: itemsCard({ app: a.key, items: [i] }), decide: true });
       }
+    });
+    (a.overlaps || []).forEach(function (o, n) {
+      out.push({ key: 'ov:' + a.key + ':' + n, html: overlapCard(a, o, n), decide: o.tasks.some(function (t) { return t.mine; }) });
     });
     var r = ST.requests[a.key];
     if (r && r.failed) out.push({ key: 'rq:' + a.key, html: '<div class="card"><div class="kicker">' + esc(a.name) + '</div><p class="say bad">' + esc(r.failed) + '</p></div>' });
@@ -2131,14 +2179,29 @@ function needCards() {
       out.push({ key: 'r:' + q.id, html: requestCard(q, a.key), decide: q.status === 'READY' || q.status === 'NEEDS_INFO', inline: !!ST.inline['r:' + q.id] });
     });
     var c = a.counts || {};
-    if (c.ready_for_me) out.push({ key: 'post:' + a.key, html: postCard(a), decide: true });
+    // A journal whose amount the rules want typed back is its own card: one decision each.
+    var typed = mineReady(a).filter(needsAmount);
+    typed.forEach(function (i) { out.push({ key: 'je:' + i.id, html: journalCard(a, i), decide: true }); });
+    if (c.ready_for_me && (!rv.items || c.ready_for_me > typed.length)) out.push({ key: 'post:' + a.key, html: postCard(a), decide: true });
     if (c.failed) out.push({ key: 'fail:' + a.key, html: failedCard(a), decide: true });
-    var p = ST.people[a.key];
+    // Nobody matched yet — offered even while an unrelated request is open;
+    // only people an open request is already about are left to it.
+    var p = ST.people[a.key], sorting = false;
     if (p && viewer().matches) {
-      var loose = (p.people || []).filter(function (x) { return x.on_roster !== false && (!x.match || x.match.status === 'SUGGESTED'); });
-      var asked = ((r && r.open) || []).length;
-      if (loose.length && !asked) out.push({ key: 'people:' + a.key, html: peopleCard(a, loose), decide: true });
+      var covered = {};
+      ((r && r.open) || []).forEach(function (q) { (q.refs || []).forEach(function (x) { covered[x] = true; }); });
+      var loose = (p.people || []).filter(function (x) {
+        return x.on_roster !== false && (!x.match || x.match.status === 'SUGGESTED') && !covered[x.ref];
+      });
+      var asked = ST.sorting[a.key] && Date.now() - ST.sorting[a.key] < 300000;
+      sorting = !!(loose.length && !asked);
+      if (sorting) out.push({ key: 'people:' + a.key, html: peopleCard(a, loose), decide: true });
     }
+    // Why the rest wait: one card per reason, saying what moves it.
+    (rv.waiting || []).forEach(function (g) {
+      var card = waitCard(a, g, sorting);
+      if (card) out.push(card);
+    });
     draftCards(a).forEach(function (d) { out.push(d); });
   });
   ((ST.apps && ST.apps.apps) || []).forEach(function (a) {
@@ -2148,13 +2211,19 @@ function needCards() {
   return out;
 }
 
+/** What this person's own tasks brought in and is ready for them to post. */
+function mineReady(a) {
+  var me = (ACCESS && ACCESS.email) || '';
+  return ((ST.review[a.key] || {}).items || []).filter(function (i) { return i.status === 'REVIEW' && i.task && i.task.owner === me; });
+}
+/** The approval rules want its amount typed back (a journal entry always). */
+function needsAmount(i) { return !!(i.needs && i.needs.type_amount); }
 /** Hours or wages a task brought in, ready for their owner to send. */
 function postCard(a) {
   var rv = ST.review[a.key] || {};
-  var me = (ACCESS && ACCESS.email) || '';
-  var items = (rv.items || []).filter(function (i) { return i.status === 'REVIEW' && i.task && i.task.owner === me; });
-  var n = a.counts.ready_for_me;
-  var kind = items[0] ? items[0].kind : 'entry';
+  var items = mineReady(a).filter(function (i) { return !needsAmount(i); });
+  var n = rv.items ? items.length : a.counts.ready_for_me;
+  var kind = items[0] ? (items[0].noun || items[0].kind) : 'entry';
   var total = items.reduce(function (s, i) { return s + Number(i.amount || 0); }, 0);
   var list = '';
   if (ST.open['post:' + a.key] && items.length) {
@@ -2173,6 +2242,12 @@ function postCard(a) {
     + '<button class="btn primary" data-act="post" data-app="' + esc(a.key) + '"' + (items.length ? '' : ' disabled') + '>Post ' + items.length + '</button></div></div>';
 }
 
+/** What a post came to, in one line: sent, or waiting for whom. */
+function afterPost(out) {
+  var w = (out && out.waiting) || [];
+  if (w.length) return 'Confirmed — it waits for ' + (names(w[0].approvers || []) || 'a second approver') + ' to approve it';
+  return plural(((out && out.posted) || []).length, 'entry', 'entries') + ' sent to QuickBooks';
+}
 /** What could not be posted, and why — never left for somebody to notice. */
 function failedCard(a) {
   var items = ((ST.review[a.key] || {}).items || []).filter(function (i) { return i.status === 'FAILED'; });
@@ -2180,18 +2255,84 @@ function failedCard(a) {
     + '<h3>' + esc(plural(a.counts.failed, 'entry', 'entries')) + ' could not be posted</h3>'
     + '<div class="rows">' + items.slice(0, 20).map(function (i) {
         return '<div class="rowx"><div class="main">' + esc(i.title) + '<small>' + esc((i.change && i.change.reason) || i.reason || 'QuickBooks refused it.') + '</small></div>'
-          + '<button class="btn link" data-act="bring-back" data-id="' + esc(i.id) + '" data-app="' + esc(a.key) + '">Try again</button></div>';
+          + '<button class="btn link" data-act="retry-item" data-id="' + esc(i.id) + '" data-app="' + esc(a.key) + '">Try again</button></div>';
       }).join('') + '</div></div>';
 }
 
 /** People nobody has said who they are in QuickBooks — handed to the assistant. */
 function peopleCard(a, loose) {
-  var names = loose.slice(0, 4).map(function (x) { return esc(x.name); }).join(', ') + (loose.length > 4 ? ' and ' + (loose.length - 4) + ' more' : '');
   return '<div class="card"><div class="kicker">' + esc(a.name) + '</div>'
-    + '<h3>' + esc(count(loose.length, 'person isn’t', 'people aren’t')) + ' matched to QuickBooks yet</h3>'
-    + '<p class="say">' + names + '. Until they are, their hours can’t be posted.</p>'
-    + '<div class="actions"><span class="meta">The assistant drafts who each person is; you approve.</span>'
-    + '<button class="btn primary" data-act="sort-people" data-app="' + esc(a.key) + '">Sort them out for me</button></div></div>';
+    + '<h3>' + esc(names(loose.map(function (x) { return x.name; }))) + (loose.length === 1 ? ' isn’t' : ' aren’t') + ' matched to QuickBooks employees</h3>'
+    + '<p class="say">Until they are, their hours can’t be posted.</p>'
+    + '<div class="actions"><span class="meta">The assistant drafts who each person is, a checker looks, and you approve.</span>'
+    + '<button class="btn primary" data-act="sort-people" data-app="' + esc(a.key) + '">Sort them out</button></div></div>';
+}
+/** "A", "A and B", "A, B and C", "A, B, C, D and 2 more". */
+function names(list) {
+  var l = list.filter(Boolean), more = l.length > 4 ? l.length - 4 : 0;
+  if (more) return l.slice(0, 4).join(', ') + ' and ' + more + ' more';
+  return l.length < 2 ? (l[0] || '') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
+}
+function shortDay(iso) {
+  var d = new Date(String(iso) + 'T12:00:00Z');
+  return isNaN(d) ? String(iso || '') : d.getUTCDate() + ' ' + d.toLocaleString('en', { month: 'short', timeZone: 'UTC' });
+}
+
+/**
+ * Why items wait, one card per reason, grouped by Eesa (qb_review's
+ * `waiting`): the reason in words, who and which days, what moves it
+ * (`next`), and — for somebody who may — the one tap that does (`act`,
+ * e.g. Approve these days). The page names no app: Eesa says all of it.
+ */
+function waitCard(a, g, sorting) {
+  if (g.why === 'overlap' || g.why === 'adding') return null;   // the overlap card has the buttons; adding is on its way
+  if (g.why === 'match' && (sorting || g.can_match)) return null;   // the Sort them out card says it, with its button
+  var who = (g.people || []).map(function (p) { return esc(p.name) + (p.days ? ' ' + p.days : ''); }).join(' · ');
+  var span = g.from ? (g.from === g.to ? shortDay(g.from) : shortDay(g.from) + ' – ' + shortDay(g.to)) : '';
+  var said = (g.said || []).length ? '<ul class="feeds">' + g.said.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '';
+  var tap = g.act && g.act.tool
+    ? '<div class="actions">' + (g.next ? '<span class="meta">' + esc(g.next) + '</span>' : '')
+      + '<button class="btn primary" data-act="wait-act" data-app="' + esc(a.key) + '" data-key="'
+      + esc(keep('act:' + a.key + ':' + g.why, g.act)) + '">' + esc(g.act.label || 'Go ahead') + '</button></div>'
+    : g.why === 'pay' ? said + '<div class="actions"><button class="btn" data-act="say" data-say="Set the pay for '
+      + esc(names((g.people || []).map(function (p) { return p.name; }))) + '">Say it</button></div>'
+    : (g.next ? '<p class="say">' + esc(g.next) + '</p>' : said);
+  return { key: 'w:' + a.key + ':' + g.why, decide: !!(g.act && g.act.tool) || g.why === 'pay', html:
+    '<div class="card" data-wait="' + esc(g.why) + '"><div class="kicker">' + esc(a.name) + ' → QuickBooks</div><h3>' + esc(g.words) + '</h3>'
+    + (who || span ? '<p class="say">' + [who, span].filter(Boolean).join(' · ') + '</p>' : '') + tap + '</div>' };
+}
+
+/** Two wage tasks post the same pay period: nothing posts until one is kept. */
+function overlapCard(a, o, n) {
+  var tasks = o.tasks || [];
+  var buttons = tasks.map(function (t) {
+    var drop = tasks.filter(function (x) { return x.id !== t.id; });
+    if (!drop.every(function (x) { return x.mine; })) return '';
+    return '<button class="btn" data-act="keep-task" data-app="' + esc(a.key) + '" data-key="'
+      + esc(keep('keep:' + a.key + ':' + n + ':' + t.id, { keep: t, drop: drop })) + '">Keep “' + esc(t.name) + '”</button>';
+  }).join('');
+  return '<div class="card" data-overlap="' + n + '"><div class="kicker">' + esc(a.name) + ' → QuickBooks</div>'
+    + '<h3>' + esc(o.words) + '</h3><div class="rows">' + tasks.map(function (t) {
+      return '<div class="rowx"><div class="main">“' + esc(t.name) + '”<small>' + esc(t.accounts || '') + ' · '
+        + esc(t.mine ? 'yours' : t.owner_name || t.owner) + '</small></div></div>';
+    }).join('') + '</div><p class="say">Nothing posts for it until one is kept.</p>'
+    + (buttons ? '<div class="actions">' + buttons + '</div>'
+      : '<p class="say">Only ' + esc(names(tasks.map(function (t) { return t.owner_name || t.owner; })
+          .filter(function (w, k, all) { return all.indexOf(w) === k; }))) + ' can delete their task.</p>')
+    + '</div>';
+}
+
+/** A wage journal: the owner types its amount back; the rules may want a second approver. */
+function journalCard(a, i) {
+  var nd = i.needs || {};
+  var lines = (i.lines || []).map(function (l) {
+    return '<div class="line"><span>' + esc((l.side === 'Credit' ? 'Credit ' : 'Debit ') + (l.account || '')) + ' · ' + esc(l.description || '') + '</span><span class="num">' + cash(l.amount) + '</span></div>';
+  }).join('');
+  return '<div class="card" data-journal="' + esc(i.id) + '"><div class="kicker">' + esc(a.name) + ' → QuickBooks</div>'
+    + '<h3>' + esc(i.title) + ' · ' + cash(nd.amount || i.amount) + '</h3>'
+    + (lines ? '<div class="lines">' + lines + '</div>' : '')
+    + '<p class="say">You type its amount back to post it' + (nd.approvals > 1 ? '; then a second approver approves it in Approvals, and it is sent.' : ', and it is sent.') + '</p>'
+    + '<div class="actions"><button class="btn primary" data-act="post-journal" data-id="' + esc(i.id) + '" data-app="' + esc(a.key) + '">Post it</button></div></div>';
 }
 
 /** Drafts from before requests existed — still somebody's to confirm. */
