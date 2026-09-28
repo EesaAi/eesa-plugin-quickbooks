@@ -2299,7 +2299,7 @@ function waitCard(a, g, sorting) {
     : (g.next ? '<p class="say">' + esc(g.next) + '</p>' : said);
   return { key: 'w:' + a.key + ':' + g.why, decide: !!(g.act && g.act.tool) || g.why === 'pay', html:
     '<div class="card" data-wait="' + esc(g.why) + '"><div class="kicker">' + esc(a.name) + ' → QuickBooks</div><h3>' + esc(g.words) + '</h3>'
-    + (who || span ? '<p class="say">' + [who, span].filter(Boolean).join(' · ') + '</p>' : '') + tap + '</div>' };
+    + (who || span ? '<p class="say">' + [who, esc(span)].filter(Boolean).join(' · ') + '</p>' : '') + tap + '</div>' };
 }
 
 /** Two wage tasks post the same pay period: nothing posts until one is kept. */

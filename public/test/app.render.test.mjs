@@ -991,3 +991,13 @@ test('Try again on something QuickBooks refused asks for it again', async () => 
   assert.deepEqual(p.called('qb_review').filter((c) => c.args.action === 'retry')[0].args, { app: 'clock', action: 'retry', ids: ['f1'] });
   assert.match(p.text('.toast'), /1 entry sent to QuickBooks/);
 });
+
+test('why items wait is drawn as text, never markup', async () => {
+  const p = mount({ tools: { qb_apps: CLOCK({ counts: { waiting: 1 } }), qb_requests: { ok: true, open: [], recent: [] },
+    qb_review: { ok: true, items: [], waiting: [{ why: 'open', words: '<b>1</b> day', from: '<i>x</i>', to: '<i>y</i>',
+      people: [{ ref: '1', name: '<img src=x>', days: 1 }], next: '<u>soon</u>' }] } } });
+  await session(p, { route: { view: 'needs' } });
+  const card = p.$('[data-wait="open"]');
+  assert.equal(card.querySelectorAll('b, i, img, u').length, 0);
+  assert.match(card.textContent, /<b>1<\/b> day[\s\S]*<img src=x> 1 · <i>x<\/i> – <i>y<\/i>[\s\S]*<u>soon<\/u>/);
+});
