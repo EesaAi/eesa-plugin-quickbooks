@@ -2026,10 +2026,8 @@ document.addEventListener('click', async function (e) {
       var ans = input ? input.value.trim() : '';
       if (!ans || !q) { if (input) input.focus(); return; }
       b.disabled = true;
-      // The answer and the question go back together, as one request, in the
-      // conversation the question was asked in.
-      await call('qb_requests', { app: app, action: 'ask', words: q.words + '\n' + ans, conversation: q.conversation || ST.conv });
-      await call('qb_requests', { app: app, action: 'discard', id: id }).catch(function () {});
+      // The same request carries on: the assistant sees what it asked and this answer, and drafts.
+      await call('qb_requests', { app: app, action: 'answer', id: id, words: ans });
       await loadRequests(app); await refresh(); watch();
       return;
     }

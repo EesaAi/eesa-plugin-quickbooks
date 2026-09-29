@@ -1036,3 +1036,22 @@ test('a chart that could not be read says why, and the dashboard still shows', a
   assert.match(section(p, 'Chart of accounts').textContent, /I couldn’t read the chart of accounts: QuickBooks did not answer/);
   assert.ok(section(p, 'Flows'));
 });
+
+test('answering the assistant\'s question carries on the same request, never a new one', async () => {
+  const Q = { id: 'rq-1', status: 'NEEDS_INFO', status_label: 'Needs an answer', words: 'Every Monday set Sam\'s pay at $5 an hour',
+    question: 'I will set Sam\'s pay to $5 an hour. 1. Weekly or every two weeks?', steps: [], findings: [], log: [],
+    created_at: '2026-09-27T15:00:00Z', asked_by: 'dana@acme.example', conversation: '' };
+  const p = mount({ tools: { ...HOME,
+    qb_apps: { ok: true, viewer: { can_connect: true, matches: true, sees_staff: true },
+      apps: [{ key: 'acmepos', name: 'Acme POS', what: 'Daily sales', connected: true, counts: {}, tasks: [] }] },
+    qb_requests: (a) => a.action === 'answer' ? { ok: true, request: { ...Q, status: 'DRAFTING' } } : { ok: true, open: [Q], recent: [] } } });
+  await session(p);
+  await click(p, p.$('[data-act="open-needs"]'));
+  const box = p.$('[data-answer="rq-1"]');
+  assert.ok(box, 'the question has its answer box');
+  box.value = 'Weekly';
+  await click(p, p.$('[data-act="answer"][data-id="rq-1"]'));
+  const sent = p.called('qb_requests').filter((c) => c.args.action && c.args.action !== 'list');
+  assert.deepEqual(sent.map((c) => c.args), [{ app: 'acmepos', action: 'answer', id: 'rq-1', words: 'Weekly' }],
+    'one answer to the same request; nothing discarded, nothing asked anew');
+});
