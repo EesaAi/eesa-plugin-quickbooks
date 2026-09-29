@@ -23,13 +23,19 @@ tokens), bubbles, "Used N steps" trail and floating ask box as Eesa's chat:
   doing, read from Eesa's tools and laid out, never invented:
   - **Needs you** — the cards themselves (drafts, questions, approvals), not a
     count of them; the rest one tap away;
-  - **This week** — the calendar: runs, pay periods, approvals, day by day;
-  - **Flows and alerts** — every one, when it runs, whether it is on, how it
-    last went; the owner's own Pause / Resume / Run now;
+  - **Events this week** — the calendar: runs, pay periods, approvals, day by day;
+  - **Chart of accounts** (29 Sep 2026: "a dashboard — flows, alerts, events,
+    chart of accounts structure") — `qb_chart` view=structure: the status line,
+    the first findings (all behind Show all), and every account by kind, closed
+    until opened. Read on opening, then at most every ten minutes;
+  - **Flows** and **Alerts** — each its own panel: when it runs, whether it is
+    on, how it last went; the owner's own Pause / Resume / Run now;
   - **Connected systems** — QuickBooks and each app, checked, with what each
     feeds QuickBooks;
   - **Done lately** — changes sent to QuickBooks and how each went.
 
+  Above the panels, a strip of numbers (need you, events this week, flows on,
+  alerts on, accounts and things to look at), each scrolling to its panel.
   Ways to start fill the box and never send. On a phone it is one column in
   that order. Something that could not be read says so in its own section.
   New flows, alerts and connections are still made by saying so in the box.

@@ -120,7 +120,28 @@
   /* One column on a phone, in the order a person deals with things; two lanes wider. */
   .board { display: flex; flex-direction: column; gap: 14px; }
   .lane { display: contents; }
-  .sec.needs { order: 1; } .sec.week { order: 2; } .sec.flows { order: 3; } .sec.systems { order: 4; } .sec.done { order: 5; }
+  .sec.needs { order: 1; } .sec.week { order: 2; } .sec.chart { order: 3; } .sec.flows { order: 4; } .sec.alerts { order: 5; }
+  .sec.systems { order: 6; } .sec.done { order: 7; }
+  /* The dashboard's numbers: each one a way to its panel. */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+  .kpi { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 10px 12px; display: flex;
+         flex-direction: column; gap: 2px; text-align: left; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
+  .kpi b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi span { font-size: 12px; color: var(--muted-fg); }
+  .kpi.warn b { color: var(--warn); }
+  .kpi:focus-visible { outline: 2px solid var(--primary, currentColor); outline-offset: 2px; }
+  .coa-find { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; }
+  .coa-find .k { flex: none; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; margin-top: 1px;
+                 background: color-mix(in oklch, var(--warn) 14%, transparent); color: var(--warn); }
+  .coa-find small { display: block; color: var(--muted-fg); }
+  .coa-group { border-top: 1px solid var(--border); }
+  .coa-group > button { width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: 0;
+                        padding: 8px 0; font: inherit; font-weight: 600; font-size: 13.5px; color: inherit; cursor: pointer; }
+  .coa-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; min-width: 0; }
+  .coa-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+  .coa-row small { color: var(--muted-fg); font-size: 11.5px; }
+  .coa-row.idle { color: var(--muted-fg); }
+  .coa-row .amt { font-variant-numeric: tabular-nums; white-space: nowrap; }
   @media (min-width: 760px) and (max-width: 899px), (min-width: 1080px) {
     .board { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
     .lane { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -767,6 +788,9 @@ var ST = {
   calDays: 7,
   calCards: {},         // calendar cards in a conversation, by what they asked
   sched: null,          // quickbooks_schedule: schedules, drafts, owners needed
+  chart: null,          // qb_chart structure: the chart's status and every account
+  chartOpen: {},        // which classifications of the chart are open
+  chartAll: false,      // every finding shown, not the first four
   conn: null,           // quickbooks_connection
   connecting: null,     // { since, timedOut } while Intuit has the person
   runs: {},             // run id -> its status, polled while it runs
@@ -975,8 +999,9 @@ function welcomeView() {
   return '<div class="home"><div class="hello"><span class="hero-ic">' + ICON.spark + '</span><div><h2>' + esc(greeting()) + '</h2>'
     + statusLine() + tzNote(businessClock()) + '</div></div>'
     + (ST.noAccess ? '<p class="say">Your QuickBooks role isn’t recorded in Eesa yet — whoever looks after QuickBooks can add it.</p>' : '')
-    + '<div class="board"><div class="lane">' + needsSection() + doneSection() + '</div>'
-    + '<div class="lane">' + weekSection() + flowsSection() + systemsSection() + '</div></div>'
+    + kpiStrip()
+    + '<div class="board"><div class="lane">' + needsSection() + chartSection() + doneSection() + '</div>'
+    + '<div class="lane">' + weekSection() + flowsSection() + alertsSection() + systemsSection() + '</div></div>'
     + '<div class="startchips">' + starts().map(function (x, i) {
         var say = String(x[1]);
         return '<button class="startchip" data-act="start" data-i="' + i + '">' + ICON.spark + esc(say.trim() + (/\s$/.test(say) ? '…' : '')) + '</button>';
@@ -1012,20 +1037,73 @@ function weekSection() {
   var items = schedItems(), on = items.filter(function (x) { return !x.paused; });
   if (items.length && !on.length) body += '<p class="quiet">' + (items.length === 1 ? 'Your one flow or alert is paused, so it doesn’t'
     : 'All ' + items.length + ' flows and alerts are paused, so none of them') + ' run this week.</p>';
-  return section('week', 'This week', ICON.cal, 0, body, '<button class="linkish" data-act="open-calendar">Calendar</button>');
+  return section('week', 'Events this week', ICON.cal, 0, body, '<button class="linkish" data-act="open-calendar">Calendar</button>');
 }
 var KIND_ICON = { alert: 'bell', pull: 'sync', flow: 'zap' };
 var KIND_WORD = { alert: 'Alert', pull: 'Brings data in', flow: 'Flow', report: 'Report' };
-/** Every flow and alert: when it runs, whether it is on, how it last went — and the owner's own pause and run. */
-function flowsSection() {
+/** Flows (and what connected apps bring in), then alerts: when each runs, whether it is on, how it last went — and the owner's own pause and run. */
+function isAlert(s) { return s.kind === 'alert'; }
+function flowsSection() { return scheduledSection('flows', 'Flows', ICON.zap, schedItems().filter(function (s) { return !isAlert(s); }),
+  'None yet. Say what to do — “every Monday, send me who owes us”, “on the 1st, the rent bill”.', 'Every Monday, '); }
+function alertsSection() { return scheduledSection('alerts', 'Alerts', ICON.bell, schedItems().filter(isAlert),
+  'None yet. Say what to watch — “alert me when cash drops below $5,000”.', 'Alert me when '); }
+function scheduledSection(cls, title, icon, items, none, say) {
   if (MISSING.quickbooks_schedule) return '';
-  var items = schedItems();
   var body = readError('sched', 'what is scheduled');
   if (!ST.sched && !ST.errors.sched) body += '<div class="skel" style="width:70%"></div>';
-  else if (!items.length) body += '<p class="quiet">None yet. Say what to watch or do — “alert me when cash drops below $5,000”, “every Monday, send me who owes us”.</p>';
+  else if (!items.length) body += '<p class="quiet">' + esc(none) + '</p>';
   body += items.map(flowRow).join('');
-  return section('flows', 'Flows and alerts', ICON.zap, items.length, body,
-    '<button class="linkish" data-act="say" data-say="Alert me when ">Set one up</button>');
+  return section(cls, title, icon, items.length, body,
+    '<button class="linkish" data-act="say" data-say="' + esc(say) + '">Set one up</button>');
+}
+/** The dashboard's numbers, each a way to its panel. */
+function kpiStrip() {
+  var items = schedItems(), flows = items.filter(function (s) { return !isAlert(s); }), alerts = items.filter(isAlert);
+  var on = function (xs) { return xs.filter(function (s) { return !s.paused; }).length; };
+  var events = ST.cal ? (ST.cal.days || []).reduce(function (n, d) { return n + (d.items || []).length; }, 0) : null;
+  var c = ST.chart, look = c ? (c.findings || []).length : 0, need = decisions();
+  var tiles = [['needs', need, need === 1 ? 'needs you' : 'need you', need ? 'warn' : '']];
+  if (!MISSING.quickbooks_calendar) tiles.push(['week', events === null ? '–' : events, 'events this week']);
+  if (!MISSING.quickbooks_schedule) tiles.push(['flows', on(flows) + ' of ' + flows.length, 'flows on'],
+                                               ['alerts', on(alerts) + ' of ' + alerts.length, 'alerts on']);
+  if (!MISSING.qb_chart) tiles.push(['chart', c ? c.accounts : '–', c ? 'accounts · ' + look + ' to look at' : 'accounts', look ? 'warn' : '']);
+  return '<div class="kpis">' + tiles.map(function (t) {
+    return '<button class="kpi ' + (t[3] || '') + '" data-act="jump" data-to="' + t[0] + '"><b>' + esc(String(t[1])) + '</b><span>' + esc(t[2]) + '</span></button>';
+  }).join('') + '</div>';
+}
+var COA_CLASS = [['Asset', 'Assets'], ['Liability', 'Liabilities'], ['Equity', 'Equity'], ['Revenue', 'Income'], ['Expense', 'Expenses']];
+var COA_KIND = { catch_all: 'Catch-all', eesa: 'Eesa app', wrong_type: 'Wrong type', missing: 'Missing', duplicate: 'Duplicate',
+                 alike: 'Look-alike', unused: 'Unused', structure: 'Layout' };
+/** The chart of accounts: where it stands (read in code from QuickBooks) and every account, by what kind it is. */
+function chartSection() {
+  if (MISSING.qb_chart) return '';
+  var c = ST.chart, body = readError('chart', 'the chart of accounts');
+  if (!c && !ST.errors.chart) body += '<div class="skel" style="width:60%"></div>';
+  if (c) {
+    var f = c.findings || [], shown = ST.chartAll ? f : f.slice(0, 4);
+    body += '<p class="say">' + esc(c.summary || '') + '</p>'
+      + shown.map(function (x) {
+        return '<div class="coa-find"><span class="k">' + esc(own(COA_KIND, x.kind) || x.kind) + '</span><span>' + esc(x.says)
+          + (x.suggest ? '<small>' + esc(x.suggest) + '</small>' : '') + '</span></div>';
+      }).join('')
+      + (f.length > shown.length ? '<button class="linkish" data-act="chart-all">Show all ' + f.length + '</button>' : '')
+      + (c.note ? '<p class="quiet">' + esc(c.note) + '</p>' : '') + coaTree(c.nodes || []);
+  }
+  return section('chart', 'Chart of accounts', ICON.flow, 0, body,
+    '<button class="linkish" data-act="say" data-say="Check our chart of accounts and tell me what to fix first">Ask about it</button>');
+}
+function coaTree(nodes) {
+  return COA_CLASS.map(function (g) {
+    var rows = nodes.filter(function (n) { return n.classification === g[0]; });
+    if (!rows.length) return '';
+    var open = !!ST.chartOpen[g[0]];
+    return '<div class="coa-group" data-cls="' + g[0] + '"><button data-act="chart-group" data-cls="' + g[0] + '" aria-expanded="' + open + '"><span>'
+      + g[1] + '</span><span class="quiet">' + rows.length + '</span></button>'
+      + (open ? rows.map(function (n) {
+        return '<div class="coa-row' + (n.idle ? ' idle' : '') + '" style="padding-left:' + Math.min(n.depth, 5) * 14 + 'px"><span>' + esc(n.name)
+          + ' <small>' + esc(n.type) + '</small></span><span class="amt">' + esc(n.amount ? n.amount + (n.per === 'balance' ? '' : ' in ' + n.per) : '') + '</span></div>';
+      }).join('') : '') + '</div>';
+  }).join('');
 }
 function flowRow(s) {
   var k = keep('s:' + s.id, s), last = s.last || {}, ran = ST.ran[k] && ST.runs[ST.ran[k]];
@@ -1828,6 +1906,9 @@ document.addEventListener('click', async function (e) {
     if (act === 'new-chat') { ST.items = null; show('new'); $('#box').focus(); return; }
     if (act === 'open-needs') { show('needs'); loadNeeds(); return; }
     if (act === 'open-calendar') { return openCalendar(); }
+    if (act === 'chart-all') { ST.chartAll = !ST.chartAll; return paintNow(); }
+    if (act === 'chart-group') { ST.chartOpen[b.dataset.cls] = !ST.chartOpen[b.dataset.cls]; return paintNow(); }
+    if (act === 'jump') { var to = document.querySelector('#view section.sec.' + b.dataset.to); if (to && to.scrollIntoView) to.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (act === 'open-conv') { return openConv(id); }
     if (act === 'more-weeks') { ST.calDays = Math.min(62, ST.calDays + 14); return loadCalendar(); }
     if (act === 'cal-row') {
@@ -2097,6 +2178,7 @@ async function loadNeeds() {
     // Paused ones too: the line counts them, and a paused schedule is still theirs.
     newer('quickbooks_schedule', { include_paused: true }, 'sched'),
     connDue() ? newer('quickbooks_connection', { action: 'status' }, 'conn') : null,
+    chartDue() ? newer('qb_chart', { view: 'structure' }, 'chart') : null,
   ]);
   if (ST.conn) ST.conn = connOf(ST.conn);
   if (ST.conn && ST.conn.company_name) $('#co').textContent = ST.conn.company_name;
@@ -2111,6 +2193,12 @@ async function loadNeeds() {
   }).concat(conn.length && v.sees_pay ? [call('qb_pay_setup', {}).then(function (r) { ST.setup = r; }).catch(function () { ST.setup = null; })] : []));
   paintNow();
   watch();
+}
+/** The chart reads QuickBooks: on opening, then at most every ten minutes (Eesa keeps the same ten-minute copy). */
+function chartDue() {
+  if (ST.chartAt && Date.now() - ST.chartAt < 600000) return false;
+  ST.chartAt = Date.now();
+  return true;
 }
 /** A live QuickBooks check costs a call to Intuit: once on opening, then at most every five minutes. */
 function connDue() {

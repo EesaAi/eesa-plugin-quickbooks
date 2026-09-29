@@ -653,15 +653,18 @@ test('home lays out what needs you, this week, every flow and alert, each system
   assert.ok(needs.querySelector('[data-draft="d1"]'), 'the draft itself is on the home screen, with its buttons');
   assert.match(needs.textContent, /Set up a weekly cash alert\?/);
 
-  assert.match(section(p, 'This week').textContent, /Acme POS sales.*Bills to pay.*Rent/s);
+  assert.match(section(p, 'Events this week').textContent, /Acme POS sales.*Bills to pay.*Rent/s);
 
-  const flows = section(p, 'Flows and alerts').textContent;
-  assert.match(flows, /Cash in the bank\s*Paused/);
-  assert.doesNotMatch(flows, /QuickBooks: Cash/, 'the app does not repeat its own name');
-  assert.match(flows, /Alert · At 09:00 on every day/);
-  assert.doesNotMatch(flows, /America\/Chicago/, 'no zone name in the sentence');
+  const alerts = section(p, 'Alerts').textContent;
+  assert.match(alerts, /Cash in the bank\s*Paused/);
+  assert.doesNotMatch(alerts, /QuickBooks: Cash/, 'the app does not repeat its own name');
+  assert.match(alerts, /Alert · At 09:00 on every day/);
+  assert.doesNotMatch(alerts, /America\/Chicago/, 'no zone name in the sentence');
+  assert.doesNotMatch(alerts, /Monthly rent bill/, 'a flow is not an alert');
+  const flows = section(p, 'Flows').textContent;
   assert.match(flows, /Monthly rent bill\s*On/);
   assert.match(flows, /next Thu 1 Oct, 9:00 AM/);
+  assert.doesNotMatch(flows, /Cash in the bank/, 'an alert is not a flow');
 
   const systems = section(p, 'Connected systems').textContent;
   assert.match(systems, /QuickBooks\s*Connected\s*Acme Bistro · answered 2m ago/);
@@ -774,8 +777,9 @@ test('a change you can try again waits under Needs you, not under Done lately; d
 test('home leaves out what this Eesa has no tool for, instead of loading forever', async () => {
   const p = mount({ tools: { ...HOME, quickbooks_calendar: NOT_AVAILABLE, quickbooks_schedule: NOT_AVAILABLE, quickbooks_connection: NOT_AVAILABLE } });
   await session(p);
-  assert.equal(section(p, 'This week'), undefined);
-  assert.equal(section(p, 'Flows and alerts'), undefined);
+  assert.equal(section(p, 'Events this week'), undefined);
+  assert.equal(section(p, 'Flows'), undefined);
+  assert.equal(section(p, 'Alerts'), undefined);
   assert.match(section(p, 'Connected systems').textContent, /QuickBooks\s*Not checked/);
 });
 
@@ -812,7 +816,7 @@ test('a done row opens to the change itself, and closes again', async () => {
 test('Set one up and Ask only put words in an empty box, and never replace what was typed', async () => {
   const p = mount({ tools: HOME });
   await session(p);
-  await click(p, p.button('Set one up'));
+  await click(p, section(p, 'Alerts').querySelector('[data-act="say"]'));
   assert.equal(p.$('#box').value, 'Alert me when ');
   await click(p, p.button('Ask'));
   assert.equal(p.$('#box').value, 'Alert me when ', 'what is in the box stays');
@@ -825,7 +829,8 @@ test('Set one up and Ask only put words in an empty box, and never replace what 
 test('a home section that could not be read says so, and the rest still shows', async () => {
   const p = mount({ tools: { ...HOME, quickbooks_schedule: { status: 500, body: { detail: 'The scheduler is down' } } } });
   await session(p);
-  assert.match(section(p, 'Flows and alerts').textContent, /I couldn’t read what is scheduled/);
+  assert.match(section(p, 'Flows').textContent, /I couldn’t read what is scheduled/);
+  assert.match(section(p, 'Alerts').textContent, /I couldn’t read what is scheduled/);
   assert.match(section(p, 'Connected systems').textContent, /Acme POS/);
 });
 
@@ -864,7 +869,7 @@ test('connected-app tasks that run as flows: their times in words, Run now for y
   assert.match(systems, /→ Post hours · Mon, Wed 06:30/);
   assert.match(systems, /→ Post wages · Weekly pay period · on the 1st 09:00/);
   assert.match(systems, /→ Post wages · Monthly pay period · daily 07:00/);
-  const flows = section(p, 'Flows and alerts').textContent;
+  const flows = section(p, 'Flows').textContent;
   assert.match(flows, /Post wages · Weekly pay period/);
   assert.match(flows, /Post wages · Monthly pay period/);
   assert.match(flows, /Brings data in/);
@@ -1000,4 +1005,67 @@ test('why items wait is drawn as text, never markup', async () => {
   const card = p.$('[data-wait="open"]');
   assert.equal(card.querySelectorAll('b, i, img, u').length, 0);
   assert.match(card.textContent, /<b>1<\/b> day[\s\S]*<img src=x> 1 · <i>x<\/i> – <i>y<\/i>[\s\S]*<u>soon<\/u>/);
+});
+
+// ── the dashboard: numbers on top, the chart of accounts beside the rest ──
+const CHART = { ok: true, summary: 'Chart of accounts: 6 accounts · 5 things to look at', accounts: 6, inactive: 1,
+  findings: [
+    { kind: 'catch_all', says: '$4,200.50 went through Ask My Accountant in the last 12 months.', suggest: 'Move each transaction to the account it belongs in.', accounts: ['Ask My Accountant'], amount: '$4,200.50' },
+    { kind: 'eesa', says: 'The “Post wages” task credits Cash, a bank account.', suggest: 'On accrual books wages owed go to Accrued Payroll.', accounts: ['Cash'] },
+    { kind: 'duplicate', says: 'Rent & Lease and Rent or Lease are the same account.', suggest: 'Keep Rent & Lease.', accounts: ['Rent & Lease', 'Rent or Lease'] },
+    { kind: 'missing', says: 'There is no account for costs incurred but not yet billed (Accrued Expenses).', suggest: 'Add it.', accounts: [] },
+    { kind: 'unused', says: '1 income and cost accounts had no activity in 12 months: Old <b>Stuff</b>.', suggest: 'Make it inactive.', accounts: ['Old <b>Stuff</b>'] }],
+  nodes: [
+    { id: '1', name: 'Checking', full: 'Checking', type: 'Bank', classification: 'Asset', depth: 0, amount: '$1,200.00', per: 'balance', idle: false },
+    { id: '8', name: 'Accrued Payroll', full: 'Accrued Payroll', type: 'Other Current Liability', classification: 'Liability', depth: 0, amount: '', per: '', idle: true },
+    { id: '11', name: 'Restaurant Sales', full: 'Restaurant Sales', type: 'Income', classification: 'Revenue', depth: 0, amount: '$150,000.00', per: '12m', idle: false },
+    { id: '20', name: 'Payroll Expenses', full: 'Payroll Expenses', type: 'Expense', classification: 'Expense', depth: 0, amount: '', per: '', idle: false },
+    { id: '21', name: 'Wages', full: 'Payroll Expenses:Wages', type: 'Expense', classification: 'Expense', depth: 1, amount: '$50,000.00', per: '12m', idle: false },
+    { id: '22', name: 'Old <b>Stuff</b>', full: 'Old <b>Stuff</b>', type: 'Expense', classification: 'Expense', depth: 0, amount: '', per: '', idle: true }] };
+
+test('the dashboard shows its numbers on top, each a way to its panel', async () => {
+  const p = mount({ tools: { ...HOME, qb_chart: CHART } });
+  await session(p);
+  const tiles = p.$$('.kpis .kpi').map((t) => t.textContent);
+  assert.deepEqual(tiles.slice(1), ['3events this week', '1 of 1flows on', '0 of 1alerts on', '6accounts · 5 to look at']);
+  assert.match(tiles[0], /need/);
+  assert.ok(p.$('.kpi[data-to="chart"]').classList.contains('warn'), 'things to look at stand out');
+  assert.deepEqual(p.called('qb_chart')[0].args, { view: 'structure' }, 'one read for the panel: its status and its accounts');
+  assert.deepEqual(p.errors.map((e) => e.message), []);
+});
+
+test('the chart of accounts panel says where it stands, the first findings, and every account by kind', async () => {
+  const p = mount({ tools: { ...HOME, qb_chart: CHART } });
+  await session(p);
+  const chart = section(p, 'Chart of accounts');
+  assert.match(chart.textContent, /Chart of accounts: 6 accounts · 5 things to look at/);
+  assert.equal(chart.querySelectorAll('.coa-find').length, 4, 'the first four; the rest behind Show all');
+  assert.match(chart.textContent, /Catch-all\$4,200\.50 went through Ask My Accountant/);
+  assert.match(chart.textContent, /Eesa appThe “Post wages” task credits Cash/);
+  await click(p, p.button('Show all 5'));
+  const again = section(p, 'Chart of accounts');
+  assert.equal(again.querySelectorAll('.coa-find').length, 5);
+  assert.match(again.innerHTML, /Old &lt;b&gt;Stuff&lt;\/b&gt;/, 'names from QuickBooks are escaped');
+  assert.deepEqual([...again.querySelectorAll('.coa-group > button span:first-child')].map((x) => x.textContent),
+    ['Assets', 'Liabilities', 'Income', 'Expenses'], 'only the kinds the chart has');
+  assert.equal(again.querySelectorAll('.coa-row').length, 0, 'closed until opened');
+  await click(p, p.$('[data-act="chart-group"][data-cls="Expense"]'));
+  const rows = [...section(p, 'Chart of accounts').querySelectorAll('.coa-row')].map((r) => r.textContent);
+  assert.deepEqual(rows, ['Payroll Expenses Expense', 'Wages Expense$50,000.00 in 12m', 'Old <b>Stuff</b> Expense']);
+  assert.equal(p.$('.coa-row.idle') !== null, true, 'an idle account is shown quieter');
+});
+
+test('an Eesa without the chart tool shows no chart panel and no chart number', async () => {
+  const p = mount({ tools: HOME });
+  await session(p);
+  assert.equal(section(p, 'Chart of accounts'), undefined);
+  assert.equal(p.$('.kpi[data-to="chart"]'), null);
+  assert.ok(p.$('.kpi[data-to="needs"]'), 'the rest of the dashboard is there');
+});
+
+test('a chart that could not be read says why, and the dashboard still shows', async () => {
+  const p = mount({ tools: { ...HOME, qb_chart: { status: 500, body: { detail: 'QuickBooks did not answer' } } } });
+  await session(p);
+  assert.match(section(p, 'Chart of accounts').textContent, /I couldn’t read the chart of accounts: QuickBooks did not answer/);
+  assert.ok(section(p, 'Flows'));
 });
