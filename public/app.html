@@ -112,7 +112,7 @@
   }
 
   /* ── home: where things stand, laid out ── */
-  .col:has(.home) { max-width: 1120px; }
+  .col:has(.home) { max-width: 1360px; }
   .home { width: 100%; display: flex; flex-direction: column; gap: 16px; padding: 4px 0 20px; }
   .hello { display: flex; gap: 12px; align-items: flex-start; }
   .hello h2 { margin: 3px 0 4px; font-size: 18px; font-weight: 600; }
@@ -120,8 +120,20 @@
   /* One column on a phone, in the order a person deals with things; two lanes wider. */
   .board { display: flex; flex-direction: column; gap: 14px; }
   .lane { display: contents; }
-  .sec.needs { order: 1; } .sec.week { order: 2; } .sec.chart { order: 3; } .sec.flows { order: 4; } .sec.alerts { order: 5; }
+  .sec.needs { order: 1; } .sec.chart { order: 2; } .sec.week { order: 3; } .sec.flows { order: 4; } .sec.alerts { order: 5; }
   .sec.systems { order: 6; } .sec.done { order: 7; }
+  /* The dashboard (29 Sep 2026, "panels first"): chart, then events-flows-alerts, then what needs you — three columns wide. */
+  @media (min-width: 1280px) {
+    .board { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) !important; }
+  }
+  .needlist { display: flex; flex-direction: column; }
+  .needrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; background: none;
+             border: 0; border-top: 1px solid var(--border); padding: 9px 0; font: inherit; font-size: 13.5px; text-align: left;
+             color: inherit; cursor: pointer; min-width: 0; }
+  .needrow:first-child { border-top: 0; }
+  .needrow > span { min-width: 0; overflow-wrap: anywhere; }
+  .needrow.decide > span::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+                                    background: var(--warn); margin-right: 8px; vertical-align: middle; }
   /* The dashboard's numbers: each one a way to its panel. */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
   .kpi { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 10px 12px; display: flex;
@@ -862,7 +874,10 @@ function ago(iso) {
  */
 function paintSide() {
   var n = decisions(), up = comingUp();
-  var html = n ? '<button class="conv' + (ST.view === 'needs' ? ' on' : '') + '" data-act="open-needs"><span class="ic wait">' + ICON.wait
+  // The dashboard: separate from the chats, always first.
+  var html = '<button class="conv' + (ST.view === 'new' ? ' on' : '') + '" data-act="new-chat"><span class="ic">' + ICON.flow
+      + '</span><span class="t"><b>Dashboard</b><small>Flows, alerts, approvals, chart</small></span></button>';
+  html += n ? '<button class="conv' + (ST.view === 'needs' ? ' on' : '') + '" data-act="open-needs"><span class="ic wait">' + ICON.wait
       + '</span><span class="t"><b>Waiting on you</b><small>' + plural(n, 'item') + '</small></span></button>' : '';
   if (up) html += '<button class="conv' + (ST.view === 'calendar' ? ' on' : '') + '" data-act="open-calendar"><span class="ic">' + ICON.cal
       + '</span><span class="t"><b>Coming up</b><small>' + esc(up) + '</small></span></button>';
@@ -1000,8 +1015,9 @@ function welcomeView() {
     + statusLine() + tzNote(businessClock()) + '</div></div>'
     + (ST.noAccess ? '<p class="say">Your QuickBooks role isn’t recorded in Eesa yet — whoever looks after QuickBooks can add it.</p>' : '')
     + kpiStrip()
-    + '<div class="board"><div class="lane">' + needsSection() + chartSection() + doneSection() + '</div>'
-    + '<div class="lane">' + weekSection() + flowsSection() + alertsSection() + systemsSection() + '</div></div>'
+    + '<div class="board"><div class="lane">' + chartSection() + '</div>'
+    + '<div class="lane">' + weekSection() + flowsSection() + alertsSection() + '</div>'
+    + '<div class="lane">' + needsSection() + systemsSection() + doneSection() + '</div></div>'
     + '<div class="startchips">' + starts().map(function (x, i) {
         var say = String(x[1]);
         return '<button class="startchip" data-act="start" data-i="' + i + '">' + ICON.spark + esc(say.trim() + (/\s$/.test(say) ? '…' : '')) + '</button>';
@@ -1021,14 +1037,27 @@ function section(cls, title, icon, n, body, more, bare) {
 function readError(key, what) {
   return ST.errors[key] ? '<p class="say bad">I couldn’t read ' + what + ': ' + esc(ST.errors[key]) + '</p>' : '';
 }
-/** What needs the person: the cards themselves, not a count of them. */
+/** What needs the person, one line each on the dashboard; a tap opens the cards themselves. */
 function needsSection() {
-  var cards = needCards(), shown = cards.slice(0, 3);
+  var all = needCards();
+  // Connecting QuickBooks comes before everything else works: that card stays whole.
+  var whole = all.filter(function (c) { return c.key === 'connect'; }), cards = all.filter(function (c) { return c.key !== 'connect'; });
   var body = readError('changes', 'what is waiting for approval') + readError('apps', 'the connected systems')
-    + (shown.length ? shown.map(function (c) { return c.html; }).join('')
-      : ST.changes || ST.errors.changes ? '<p class="quiet">Nothing needs you right now.</p>' : '<div class="skel" style="width:70%"></div>');
-  var more = cards.length > shown.length ? '<button class="linkish" data-act="open-needs">See everything waiting</button>' : '';
-  return section('needs', 'Needs you', ICON.wait, decisions(), body, more, true);
+    + whole.map(function (c) { return c.html; }).join('')
+    + (cards.length ? '<div class="needlist">' + cards.map(function (c) {
+        return '<button class="needrow' + (c.decide ? ' decide' : '') + '" data-act="open-needs" data-need="' + esc(c.key) + '"><span>'
+          + esc(cardTitle(c.html)) + '</span>' + ICON.chev + '</button>';
+      }).join('') + '</div>'
+      : whole.length ? '' : ST.changes || ST.errors.changes ? '<p class="quiet">Nothing needs you right now.</p>' : '<div class="skel" style="width:70%"></div>');
+  var more = cards.length ? '<button class="linkish" data-act="open-needs">Open all</button>' : '';
+  return section('needs', 'Needs you', ICON.wait, decisions(), body, more);
+}
+/** A card's own title, in one line, for the dashboard's list. */
+function cardTitle(html) {
+  var d = document.createElement('div');
+  d.innerHTML = html;
+  var h = d.querySelector('h3') || d.querySelector('b') || d;
+  return String(h.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 110);
 }
 /** This week: every run, pay period and approval the calendar knows, day by day. */
 function weekSection() {
@@ -1107,21 +1136,18 @@ function coaTree(nodes) {
 }
 function flowRow(s) {
   var k = keep('s:' + s.id, s), last = s.last || {}, ran = ST.ran[k] && ST.runs[ST.ran[k]];
-  var mine = !!(s.owner && s.owner.is_me), can = mine ? s.can || [] : [], busy = ST.busy[k] ? ' disabled' : '';
   if (ran && RUNNING.indexOf(ran.status) === -1) ran = null;   // a run that ended shows as the last run
   var about = [own(KIND_WORD, s.kind) || 'Scheduled', String(s.when || '').replace(/\s*\([^)]*\)\s*$/, ''),
                !s.paused && (s.next_time || s.next_at) && 'next ' + (s.next_time || when(s.next_at)),
                s.owner && !s.owner.is_me && s.owner.name + '’s'].filter(Boolean).join(' · ');
-  var acts = (s.paused && can.indexOf('resume') !== -1 ? '<button class="btn" data-act="sched-do" data-do="resume" data-key="' + esc(k) + '"' + busy + '>Resume</button>' : '')
-    + (!s.paused && can.indexOf('pause') !== -1 ? '<button class="btn" data-act="sched-do" data-do="pause" data-key="' + esc(k) + '"' + busy + '>Pause</button>' : '')
-    + ((s.kind === 'alert' || s.kind === 'pull') && can.indexOf('run_now') !== -1 ? '<button class="btn" data-act="run-now" data-key="' + esc(k) + '">Run now</button>' : '');
+  // The dashboard shows each one; pausing, resuming and running are said in the chat.
   return '<div class="item" data-sched="' + esc(s.id) + '"><span class="fi">' + ICON[own(KIND_ICON, s.kind) || 'zap'] + '</span>'
     + '<div class="main"><b>' + esc(flowTitle(s.title, s.id)) + '</b> '
     + (s.paused ? '<span class="tag">Paused</span>' : '<span class="tag ok">On</span>')
     + '<small>' + esc(about) + '</small>'
     + (ran ? '<small>Now ' + tag(ran.status) + '</small>'
       : last.status ? '<small>Last run ' + esc(last.at ? ago(last.at) : '') + ' ' + tag(last.status) + (last.said ? ' ' + esc(last.said) : '') + '</small>' : '')
-    + '</div><div class="side-acts">' + acts + '</div></div>';
+    + '</div></div>';
 }
 var DAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 /** When a task runs, in words: "daily 07:00", "Mon, Wed 06:30", "on the 1st 09:00". */

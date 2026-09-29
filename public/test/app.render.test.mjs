@@ -650,8 +650,11 @@ test('home lays out what needs you, this week, every flow and alert, each system
   const p = mount({ tools: HOME });
   await session(p);
   const needs = section(p, 'Needs you');
-  assert.ok(needs.querySelector('[data-draft="d1"]'), 'the draft itself is on the home screen, with its buttons');
-  assert.match(needs.textContent, /Set up a weekly cash alert\?/);
+  assert.match(needs.querySelector('.needrow').textContent, /Set up a weekly cash alert\?/, 'one line per thing on the dashboard');
+  assert.equal(needs.querySelector('[data-draft="d1"]'), null, 'the card itself opens on a tap');
+  await click(p, needs.querySelector('.needrow'));
+  assert.ok(p.$('#view [data-draft="d1"]'), 'a tap opens the card, with its buttons');
+  await click(p, p.$('[data-act="new-chat"]') || p.button('New chat'));
 
   assert.match(section(p, 'Events this week').textContent, /Acme POS sales.*Bills to pay.*Rent/s);
 
@@ -680,21 +683,14 @@ test('home lays out what needs you, this week, every flow and alert, each system
   assert.deepEqual(p.errors.map((e) => e.message), []);
 });
 
-test('a flow\'s owner pauses and resumes it from home, as their own tap', async () => {
-  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: (a) => ({ ok: true, message: a.action === 'pause' ? 'Paused.' : 'Back on.' }) } });
-  await session(p);
-  await click(p, p.$('[data-sched="f1"] [data-do="resume"]'));
-  assert.deepEqual(p.called('quickbooks_schedule_change')[0].args, { id: 'f1', action: 'resume' });
-  await click(p, p.$('[data-sched="f2"] [data-do="pause"]'));
-  assert.deepEqual(p.called('quickbooks_schedule_change')[1].args, { id: 'f2', action: 'pause' });
-  assert.equal(p.$('[data-sched="f1"] [data-do="pause"]'), null, 'a paused one offers Resume, not Pause');
-});
-
-test('home runs only your own alert in one tap; a flow that may ask QuickBooks is run by asking, where its card says what happens', async () => {
+test('the dashboard shows every flow and alert with no buttons: they are paused, resumed and run by asking in the chat', async () => {
   const p = mount({ tools: HOME });
   await session(p);
-  assert.ok(p.$('[data-sched="f1"] [data-act="run-now"]'), 'your own alert: Run now');
-  assert.equal(p.$('[data-sched="f2"] [data-act="run-now"]'), null, 'a flow: no one-tap Run now');
+  assert.ok(p.$('[data-sched="f1"]') && p.$('[data-sched="f2"]'), 'both are on the dashboard');
+  assert.equal(p.$$('[data-sched] button').length, 0, 'no Pause, Resume or Run now: control is the chat');
+  assert.match(section(p, 'Alerts').textContent, /Cash in the bank\s*Paused/);
+  assert.match(section(p, 'Flows').textContent, /Monthly rent bill\s*On/);
+  assert.ok(p.$('#convs [data-act="new-chat"]').textContent.includes('Dashboard'), 'the dashboard has its own place in the sidebar');
 });
 
 test('somebody else\'s flow has no buttons on home — an admin changes it by asking, and reads the card', async () => {
@@ -705,35 +701,6 @@ test('somebody else\'s flow has no buttons on home — an admin changes it by as
   const row = p.$('[data-sched="o1"]');
   assert.equal(row.querySelectorAll('button').length, 0);
   assert.match(row.textContent, /Lee Park’s/);
-});
-
-test('a pause that comes back as a card is left for the person, never approved by the page', async () => {
-  const p = mount({ tools: { ...HOME,
-    quickbooks_schedule_change: { ok: true, requires_confirm: true, draft_id: 'dz', card: { type: 'draft', id: 'dz', title: 'Pause it?' } } } });
-  await session(p);
-  await click(p, p.$('[data-sched="f2"] [data-do="pause"]'));
-  assert.equal(p.called('quickbooks_draft_decide').length, 0);
-  assert.match(p.text(), /Check the card under Needs you/);
-});
-
-test('a second tap while the first is on its way sends nothing more', async () => {
-  const p = mount({ tools: { ...HOME, quickbooks_schedule_change: { ok: true, message: 'Back on.' } } });
-  await session(p);
-  // Hold the call open, as a slow network would.
-  const real = p.window.fetch;
-  let answer;
-  p.window.fetch = (url, init) => (JSON.parse(init.body).tool === 'quickbooks_schedule_change'
-    ? new Promise((r) => { answer = () => r(real(url, init)); }) : real(url, init));
-  p.$('[data-sched="f1"] [data-do="resume"]').click();
-  await settle(p);
-  const again = p.$('[data-sched="f1"] [data-do="resume"]');
-  assert.ok(again.disabled, 'the button is drawn disabled while its call is out');
-  again.click();
-  await settle(p);
-  assert.equal(p.called('quickbooks_schedule_change').length, 0, 'the held call has not reached the tool yet');
-  answer();
-  await settle(p);
-  assert.equal(p.called('quickbooks_schedule_change').length, 1, 'one tap, one call');
 });
 
 test('the times on home say whose clock they keep, once, at the top', async () => {
@@ -873,7 +840,7 @@ test('connected-app tasks that run as flows: their times in words, Run now for y
   assert.match(flows, /Post wages · Weekly pay period/);
   assert.match(flows, /Post wages · Monthly pay period/);
   assert.match(flows, /Brings data in/);
-  assert.ok(p.$('[data-sched="p2"] [data-act="run-now"]'), 'your own pull runs now in one tap: it only reads');
+  assert.equal(p.$('[data-sched="p2"] button'), null, 'run by asking in the chat');
 });
 
 // ── a connected app's items: why they wait, the wage journal, two tasks, a retry ──
